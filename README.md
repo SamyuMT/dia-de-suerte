@@ -1,41 +1,57 @@
 # Día de Suerte
 
-Libro de aventuras virtual para guardar recuerdos vividos (y por vivir) con esa persona especial.
+Libro de aventuras virtual y privado para guardar recuerdos vividos (y por vivir) con esa persona especial.
+Funciona como un pequeño CMS: se inicia sesión, se lee el libro y desde **Crear** se escriben y editan las páginas.
 
-Hecho con **Next.js (App Router) + React + TypeScript** y CSS Modules.
+Hecho con **Next.js 16 (App Router) + React 19 + TypeScript**, CSS Modules y **Supabase** (Postgres + Auth).
+
+## Puesta en marcha
+
+1. Instala dependencias: `npm install`
+2. Copia `.env.example` como `.env.local` y pon la URL y la *publishable key* de tu proyecto de Supabase
+   (Project Settings → API Keys).
+3. Aplica las migraciones de `supabase/migrations/`: se aplican solas con la integración de GitHub de Supabase
+   al hacer push a `main`, o puedes pegar el SQL en el **SQL Editor** del dashboard.
+4. Crea los usuarios en Supabase: **Authentication → Users → Add user** (marca *Auto Confirm User*).
+   No hay registro público.
+5. `npm run dev` y abre http://localhost:3000
 
 ## Comandos
 
 ```bash
-npm install     # instalar dependencias
 npm run dev     # servidor de desarrollo en http://localhost:3000
 npm run build   # build de producción
 npm start       # servir el build
 ```
 
+## Cómo funciona
+
+- **Todo es privado**: sin sesión, cualquier ruta redirige a `/login` (`src/proxy.ts`).
+- Al entrar se ve el libro (`/`). En el menú, **Crear** abre el panel `/admin`.
+- En el panel se crean, editan, borran y publican (o dejan en borrador) las páginas.
+- Los datos están en la tabla `memories` con RLS: solo usuarios con sesión pueden leer o escribir.
+
 ## Estructura
 
 ```
 src/
-├─ app/                      Rutas (cada carpeta = una URL)
-│  ├─ layout.tsx             Layout global: fuentes, header, footer
-│  ├─ page.tsx               Home  →  /
-│  ├─ recuerdos/[slug]/      Página de un recuerdo  →  /recuerdos/:slug
-│  └─ not-found.tsx          404
-├─ components/               Componentes reutilizables (BookCover, Polaroid, Carnation, ...)
-├─ data/memories.ts          Recuerdos guardados (temporal, hasta tener base de datos)
-├─ lib/memories.ts           Capa de acceso a datos: getMemories / getMemoryBySlug
+├─ proxy.ts                  Protege todas las rutas (sesión de Supabase)
+├─ app/
+│  ├─ page.tsx               El libro  →  /
+│  ├─ recuerdos/[slug]/      Una página del libro  →  /recuerdos/:slug
+│  ├─ login/                 Inicio de sesión  →  /login
+│  └─ admin/                 CMS  →  /admin, /admin/nueva, /admin/:id
+├─ components/               BookCover, Polaroid, MemoryCard, Carnation, SiteHeader, ...
+├─ lib/
+│  ├─ memories.ts            Capa de datos (consultas a Supabase)
+│  ├─ auth.ts                Usuario actual / requireUser
+│  └─ supabase/              Clientes de Supabase (servidor y proxy)
 └─ types/memory.ts           Tipo Memory
+supabase/migrations/         Esquema de la base de datos (SQL)
 ```
-
-## Publicar un nuevo recuerdo
-
-Agrega un objeto al arreglo de `src/data/memories.ts` con un `slug` único. La página aparece
-automáticamente en el home y en `/recuerdos/<slug>`.
 
 ## Próximos pasos
 
-- **Base de datos**: reemplazar el contenido de `src/lib/memories.ts` por consultas (p. ej. Prisma + PostgreSQL o Supabase). Las páginas no cambian porque ya usan funciones `async`.
-- **API**: crear rutas en `src/app/api/.../route.ts`.
-- **Login**: agregar Auth.js (NextAuth) o Supabase Auth y proteger rutas con `src/middleware.ts`.
-- **Admin**: crear `src/app/admin/` para escribir, editar y subir fotos a los recuerdos.
+- Subir fotos a los recuerdos (Supabase Storage).
+- Aventuras por vivir y línea de tiempo.
+- Deploy en Vercel.

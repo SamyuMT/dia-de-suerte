@@ -3,16 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Carnation from "@/components/Carnation";
 import { formatDate } from "@/lib/format";
-import { getMemories, getMemoryBySlug } from "@/lib/memories";
+import { getMemoryBySlug } from "@/lib/memories";
 import styles from "./page.module.css";
 
 interface Props {
   params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  const memories = await getMemories();
-  return memories.map((m) => ({ slug: m.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

@@ -1,0 +1,128 @@
+.wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 56px;
+  padding-bottom: 72px;
+}
+
+/* Hoja de pergamino pegada con cinta */
+.card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 44px clamp(20px, 6vw, 40px) 36px;
+  text-align: center;
+  background-color: var(--paper-light);
+  background-image: var(--noise),
+    radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(140, 95, 45, 0.3) 100%);
+  border-radius: 4px;
+  box-shadow: 0 14px 30px rgba(50, 28, 10, 0.3);
+  transform: rotate(-0.6deg);
+}
+
+.tape {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  width: 120px;
+  height: 30px;
+  background: var(--tape);
+  transform: translateX(-50%) rotate(2deg);
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.2);
+}
+
+.medallion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin-bottom: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--leather-line);
+  background-color: var(--leather);
+  background-image: var(--noise), radial-gradient(circle at 35% 30%, #6a4329, var(--leather-dark));
+  box-shadow: 0 4px 10px rgba(50, 28, 10, 0.35);
+}
+
+.title {
+  margin: 0 0 4px;
+  font-family: var(--font-hand);
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.subtitle {
+  margin: 0 0 26px;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.form {
+  display: grid;
+  gap: 18px;
+  text-align: left;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+.label {
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  line-height: 1.1;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 2px;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1.5px dashed var(--paper-edge);
+  outline: none;
+}
+
+.input:focus {
+  border-bottom-style: solid;
+  border-bottom-color: var(--cloth-dark);
+}
+
+.error {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: var(--cloth-dark);
+  border: 1.5px solid var(--cloth-dark);
+  border-radius: 3px;
+  transform: rotate(-1deg);
+}
+
+.button {
+  margin-top: 6px;
+  padding: 10px 18px;
+  font-family: var(--font-title);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--paper-light);
+  background-color: var(--cloth);
+  background-image: var(--noise);
+  border: 0;
+  border-radius: 4px;
+  box-shadow: 0 3px 0 var(--cloth-dark);
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: var(--cloth-dark);
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
