@@ -1,0 +1,64 @@
+.polaroid {
+  position: relative;
+  margin: 0;
+  padding: 12px 12px 6px;
+  background: #fbf6ea;
+  box-shadow: 0 8px 18px rgba(60, 35, 15, 0.28);
+  transform: rotate(var(--tilt, 0deg));
+  transition: transform 0.3s ease;
+}
+
+.polaroid:hover {
+  transform: rotate(0deg) scale(1.02);
+}
+
+.photo {
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background-color: #e9dcc0;
+  background-image: var(--noise), radial-gradient(circle at 50% 40%, #f6ecd6, #d4bb8e);
+  overflow: hidden;
+}
+
+.caption {
+  padding: 8px 4px 4px;
+  text-align: center;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+/* Esquineros de álbum */
+.corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  background: #2b1d14;
+  z-index: 1;
+}
+
+.tl {
+  top: -6px;
+  left: -6px;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.tr {
+  top: -6px;
+  right: -6px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%);
+}
+
+.bl {
+  bottom: -6px;
+  left: -6px;
+  clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+
+.br {
+  bottom: -6px;
+  right: -6px;
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}

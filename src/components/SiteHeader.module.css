@@ -1,0 +1,60 @@
+.header {
+  position: relative;
+  background-color: var(--leather);
+  background-image: var(--noise), linear-gradient(180deg, var(--leather) 0%, var(--leather-dark) 100%);
+  color: var(--paper-light);
+  box-shadow: 0 4px 14px rgba(40, 22, 10, 0.35);
+}
+
+.cloth {
+  height: 8px;
+  background-color: var(--cloth);
+  background-image: var(--noise);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 1.35rem;
+  letter-spacing: 0.04em;
+}
+
+.nav {
+  display: flex;
+  gap: 20px;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+}
+
+.nav a {
+  text-decoration: none;
+  opacity: 0.85;
+  transition: opacity 0.2s, color 0.2s;
+}
+
+.nav a:hover {
+  opacity: 1;
+  color: var(--letter-4);
+}
+
+@media (max-width: 480px) {
+  .brand {
+    font-size: 1.1rem;
+  }
+  .nav {
+    gap: 14px;
+    font-size: 1.2rem;
+  }
+}
