@@ -109,6 +109,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+.volume {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.95rem;
+}
+
+.volume input {
+  width: 90px;
+  accent-color: var(--leather);
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

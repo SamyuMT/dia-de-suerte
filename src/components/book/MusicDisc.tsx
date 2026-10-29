@@ -6,6 +6,21 @@ import { paragraphs } from "./TextBlock";
 import blockStyles from "./Blocks.module.css";
 import styles from "./MusicDisc.module.css";
 
+/** Volumen con el que empiezan los discos (0 a 1); el usuario lo cambia y se recuerda. */
+const DEFAULT_VOLUME = 0.5;
+const VOLUME_KEY = "dia-de-suerte:volumen";
+
+function savedVolume() {
+  try {
+    const value = Number(localStorage.getItem(VOLUME_KEY));
+    return Number.isFinite(value) && value >= 0 && value <= 1 && localStorage.getItem(VOLUME_KEY) !== null
+      ? value
+      : DEFAULT_VOLUME;
+  } catch {
+    return DEFAULT_VOLUME;
+  }
+}
+
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds)) return "0:00";
   const m = Math.floor(seconds / 60);
@@ -19,7 +34,24 @@ export default function MusicDisc({ block }: { block: MemoryBlock }) {
   const [playing, setPlaying] = useState(false);
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(block.media[0]?.media.durationSeconds ?? 0);
+  const [volume, setVolume] = useState(DEFAULT_VOLUME);
   const track = block.media[0]?.media;
+
+  // El volumen guardado solo existe en el navegador: se lee después de montar.
+  useEffect(() => setVolume(savedVolume()), []);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume, track?.url]);
+
+  const changeVolume = (value: number) => {
+    setVolume(value);
+    try {
+      localStorage.setItem(VOLUME_KEY, String(value));
+    } catch {
+      // Sin almacenamiento (modo privado): el volumen vale solo para esta visita.
+    }
+  };
 
   useEffect(() => {
     // Si cambia la canción (en el editor), se detiene la anterior.
@@ -80,6 +112,18 @@ export default function MusicDisc({ block }: { block: MemoryBlock }) {
           <span className={styles.time}>
             {formatTime(time)} / {formatTime(duration)}
           </span>
+          <label className={styles.volume}>
+            <span aria-hidden="true">{volume === 0 ? "🔇" : volume < 0.5 ? "🔈" : "🔊"}</span>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={volume}
+              onChange={(e) => changeVolume(Number(e.target.value))}
+              aria-label="Volumen"
+            />
+          </label>
         </div>
 
         {track && (
@@ -91,7 +135,10 @@ export default function MusicDisc({ block }: { block: MemoryBlock }) {
             onPause={() => setPlaying(false)}
             onEnded={() => setPlaying(false)}
             onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
-            onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+            onLoadedMetadata={(e) => {
+              setDuration(e.currentTarget.duration);
+              e.currentTarget.volume = volume;
+            }}
           />
         )}
       </div>
