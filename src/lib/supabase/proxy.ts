@@ -6,6 +6,12 @@ import { supabaseEnv } from "./env";
 const PUBLIC_PATHS = ["/login"];
 
 /**
+ * Rutas que se dejan pasar sin sesión porque la página decide:
+ * un recuerdo "public" se ve con el enlace; si no, la página manda al login.
+ */
+const OPEN_PREFIXES = ["/recuerdos/"];
+
+/**
  * Refresca la sesión de Supabase en cada petición y redirige al login
  * a cualquiera que no haya iniciado sesión.
  */
@@ -34,7 +40,8 @@ export async function updateSession(request: NextRequest) {
   const isLoggedIn = Boolean(data?.claims);
   const { pathname, search } = request.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.includes(pathname);
+  const isPublic =
+    PUBLIC_PATHS.includes(pathname) || OPEN_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   if (!isPublic && !isLoggedIn) {
     const loginUrl = request.nextUrl.clone();

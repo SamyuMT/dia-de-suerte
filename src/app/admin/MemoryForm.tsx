@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-import type { Memory } from "@/types/memory";
+import { useActionState, useState } from "react";
+import type { Memory, MemoryVisibility, Profile } from "@/types/memory";
 import { saveMemory, type MemoryFormState } from "./actions";
 import styles from "./MemoryForm.module.css";
+
+const VISIBILITY_OPTIONS: { value: MemoryVisibility; label: string; hint: string }[] = [
+  { value: "draft", label: "Borrador", hint: "Solo tú la ves." },
+  { value: "members", label: "Miembros", hint: "Todos los que tienen cuenta en el libro." },
+  { value: "selected", label: "Personas elegidas", hint: "Solo tú y quienes marques abajo." },
+  { value: "public", label: "Pública con enlace", hint: "Cualquiera con el enlace, aunque no tenga cuenta." },
+];
 
 function today() {
   const d = new Date();
@@ -13,7 +20,7 @@ function today() {
 }
 
 /** Valores iniciales del formulario a partir de una página existente. */
-function valuesFrom(memory?: Memory): Record<string, string> {
+function valuesFrom(memory?: Memory, viewerIds: string[] = []): Record<string, string> {
   return {
     title: memory?.title ?? "",
     slug: memory?.slug ?? "",
@@ -25,20 +32,59 @@ function valuesFrom(memory?: Memory): Record<string, string> {
     decoration: memory?.decoration ?? "",
     decorationCaption: memory?.decorationCaption ?? "",
     tags: memory?.tags.join(", ") ?? "",
-    published: memory === undefined || memory.published ? "on" : "",
+    visibility: memory?.visibility ?? "members",
+    viewers: viewerIds.join(","),
   };
 }
 
-export default function MemoryForm({ memory }: { memory?: Memory }) {
-  const initialState: MemoryFormState = { error: null, values: valuesFrom(memory), attempt: 0 };
+interface Props {
+  memory?: Memory;
+  /** Usuarios con los que ya se compartió (al editar) */
+  viewerIds?: string[];
+  /** Los demás usuarios del libro */
+  profiles: Profile[];
+}
+
+export default function MemoryForm({ memory, viewerIds, profiles }: Props) {
+  const initialState: MemoryFormState = {
+    error: null,
+    values: valuesFrom(memory, viewerIds),
+    attempt: 0,
+  };
   const [state, formAction, pending] = useActionState(
     saveMemory.bind(null, memory?.id ?? null),
     initialState,
   );
-  const v = state.values;
 
   return (
-    <form key={state.attempt} action={formAction} className={styles.form}>
+    <form action={formAction} className={styles.form}>
+      {/* key: vuelve a montar los campos con lo enviado si hubo un error */}
+      <Fields
+        key={state.attempt}
+        values={state.values}
+        profiles={profiles}
+        error={state.error}
+        pending={pending}
+        isEdit={Boolean(memory)}
+      />
+    </form>
+  );
+}
+
+interface FieldsProps {
+  values: Record<string, string>;
+  profiles: Profile[];
+  error: string | null;
+  pending: boolean;
+  isEdit: boolean;
+}
+
+function Fields({ values: v, profiles, error, pending, isEdit }: FieldsProps) {
+  const [visibility, setVisibility] = useState(v.visibility as MemoryVisibility);
+  const selectedViewers = new Set(v.viewers ? v.viewers.split(",") : []);
+
+  return (
+    <>
       <div className={styles.row}>
         <label className={`${styles.field} ${styles.grow}`}>
           <span className={styles.label}>Título *</span>
@@ -115,14 +161,52 @@ export default function MemoryForm({ memory }: { memory?: Memory }) {
         <span className={styles.hint}>Separadas por comas.</span>
       </label>
 
-      <label className={styles.check}>
-        <input type="checkbox" name="published" defaultChecked={v.published === "on"} />
-        <span>Publicada (si no, queda como borrador y solo se ve en el panel)</span>
-      </label>
+      <fieldset className={styles.fieldset}>
+        <legend className={styles.label}>¿Quién puede verla?</legend>
+        <div className={styles.options}>
+          {VISIBILITY_OPTIONS.map((option) => (
+            <label key={option.value} className={styles.option}>
+              <input
+                type="radio"
+                name="visibility"
+                value={option.value}
+                checked={visibility === option.value}
+                onChange={() => setVisibility(option.value)}
+              />
+              <span>
+                <strong>{option.label}</strong>
+                <span className={styles.hint}>{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
 
-      {state.error && (
+        {visibility === "selected" && (
+          <div className={styles.viewers}>
+            {profiles.length === 0 ? (
+              <p className={styles.hint}>Todavía no hay más usuarios en el libro.</p>
+            ) : (
+              profiles.map((profile) => (
+                <label key={profile.id} className={styles.check}>
+                  <input
+                    type="checkbox"
+                    name="viewers"
+                    value={profile.id}
+                    defaultChecked={selectedViewers.has(profile.id)}
+                  />
+                  <span>
+                    {profile.displayName} <span className={styles.hint}>{profile.email}</span>
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+        )}
+      </fieldset>
+
+      {error && (
         <p className={styles.error} role="alert">
-          {state.error}
+          {error}
         </p>
       )}
 
@@ -131,9 +215,9 @@ export default function MemoryForm({ memory }: { memory?: Memory }) {
           Cancelar
         </Link>
         <button type="submit" className={styles.submit} disabled={pending}>
-          {pending ? "Guardando..." : memory ? "Guardar cambios" : "Pegar en el libro"}
+          {pending ? "Guardando..." : isEdit ? "Guardar cambios" : "Pegar en el libro"}
         </button>
       </div>
-    </form>
+    </>
   );
 }

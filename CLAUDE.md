@@ -12,6 +12,8 @@ Todo el contenido y la UI van en **español**.
 - Supabase (Postgres + Auth) con `@supabase/ssr` y `@supabase/supabase-js`.
 - Fuentes con `next/font/google`: Playfair Display (títulos), Lora (texto), Caveat (manuscrita).
 - Repo: https://github.com/SamyuMT/dia-de-suerte (rama `main`). Proyecto Supabase: ref `muzkgchxtwntbgbolubh`, conectado al repo por la integración de GitHub.
+- Vercel: proyecto `dia-de-suerte` (https://dia-de-suerte.vercel.app), conectado a GitHub: **cada push a `main` despliega a producción**. Las variables `NEXT_PUBLIC_SUPABASE_*` ya están en Vercel (tipo Config, los 3 entornos). CLI: `npx vercel@latest ...` (sesión iniciada como samyumt).
+- **Antes de hacer push con cambios de esquema, la migración debe estar aplicada en Supabase**, o producción se rompe.
 
 ```bash
 npm run dev     # http://localhost:3000
@@ -34,12 +36,12 @@ src/
 │  └─ not-found.tsx
 ├─ components/                 BookCover, Polaroid, MemoryCard, Carnation, Clover, SiteHeader, SiteFooter
 ├─ lib/
-│  ├─ memories.ts              Capa de datos (Supabase): getMemories, getAllMemories, getMemoryBySlug,
-│  │                           getMemoryById, createMemory, updateMemory, deleteMemory
+│  ├─ memories.ts              Capa de datos (Supabase): getMemories, getMyMemories, getMemoryBySlug,
+│  │                           getMyMemoryById, getOtherProfiles, createMemory, updateMemory, deleteMemory
 │  ├─ auth.ts                  getCurrentUser(), requireUser(), safeNextPath()
 │  ├─ supabase/                env.ts, server.ts (createClient por petición), proxy.ts (updateSession)
 │  └─ format.ts                formatDate() en español
-└─ types/memory.ts             Memory, MemoryInput, MEMORY_DECORATIONS
+└─ types/memory.ts             Memory, MemoryInput, Profile, MEMORY_VISIBILITIES, VISIBILITY_LABELS
 supabase/
 ├─ config.toml                 Generado por `supabase init`
 └─ migrations/                 SQL versionado (fuente de verdad del esquema)
@@ -47,7 +49,7 @@ supabase/
 
 ## Auth y privacidad
 
-- **Nada es público.** `src/lib/supabase/proxy.ts` deja pasar sin sesión solo `PUBLIC_PATHS` (`/login`); todo lo demás redirige a `/login?next=...`. Con sesión, `/login` redirige al libro (`/`).
+- **Privado por defecto.** `src/lib/supabase/proxy.ts` deja pasar sin sesión `PUBLIC_PATHS` (`/login`) y `OPEN_PREFIXES` (`/recuerdos/`); todo lo demás redirige a `/login?next=...`. En `/recuerdos/[slug]` decide el RLS: si la página es `public` se ve sin sesión; si no, la página redirige al login. Con sesión, `/login` redirige al libro (`/`).
 - Email + contraseña con Supabase Auth. **Solo login, sin registro**: los usuarios se crean en el dashboard de Supabase (Authentication → Users → Add user → marcar *Auto Confirm User*).
 - Variables en `.env.local` (ver `.env.example`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - Header (`SiteHeader`, server component): con sesión muestra Inicio · Recuerdos · **Crear** (→ `/admin`) · Salir. Sin sesión solo la marca.
@@ -55,10 +57,14 @@ supabase/
 
 ## Base de datos
 
-- Tabla `public.memories`: `id uuid`, `slug` (único, kebab-case), `title`, `date`, `excerpt`, `content text[]` (párrafos), `greeting`, `signature`, `decoration` (`'clavel'` o null), `decoration_caption`, `tags text[]`, `published`, `created_by`, `created_at`, `updated_at` (trigger).
-- **RLS activado**: solo el rol `authenticated` puede leer/crear/editar/borrar; `anon` no tiene acceso.
-- Los cambios de esquema van **siempre** como migración nueva en `supabase/migrations/<timestamp>_<nombre>.sql` (nunca editar una migración ya aplicada). Al hacer push a `main`, la integración de GitHub de Supabase las aplica (si está activado "Deploy to production"); si no, se pegan en el SQL Editor.
-- MCP de Supabase configurado en `.mcp.json` (servidor HTTP oficial, `project_ref` fijo). Requiere autenticarse una vez con `/mcp` en Claude Code; después Claude puede consultar la base y aplicar migraciones.
+- `public.memories`: `id uuid`, `slug` (único, kebab-case), `title`, `date`, `excerpt`, `content text[]` (párrafos), `greeting`, `signature`, `decoration` (`'clavel'` o null), `decoration_caption`, `tags text[]`, `visibility`, `created_by` (autor, default `auth.uid()`), `created_at`, `updated_at` (trigger).
+- `visibility` (enum `memory_visibility`): `draft` (solo el autor) · `members` (todos con sesión) · `selected` (autor + usuarios en `memory_viewers`) · `public` (cualquiera con el enlace, también `anon`).
+- `public.memory_viewers (memory_id, user_id)`: usuarios elegidos para páginas `selected`. Solo el autor de la página los gestiona.
+- `public.profiles (id, email, display_name)`: directorio de usuarios; se llena con el trigger `on_auth_user_created` (función `private.handle_new_user`).
+- **RLS**: cada uno ve lo suyo + lo que le comparten; **solo el autor crea a su nombre, edita y borra**. Helper `private.is_memory_owner()` (security definer) evita recursión entre políticas. El esquema `private` no se expone en la API.
+- El libro (`/`) muestra todo lo visible menos borradores; el panel (`/admin`) solo las páginas propias.
+- Los cambios de esquema van **siempre** como migración nueva en `supabase/migrations/<timestamp>_<nombre>.sql` (nunca editar una migración ya aplicada). El historial está en `supabase_migrations.schema_migrations`; si una migración se aplica a mano (SQL Editor), registrar su versión ahí para que "Deploy to production" de la integración de GitHub no intente repetirla.
+- MCP de Supabase en `.mcp.json` (servidor HTTP oficial, `project_ref` fijo; autenticar con `/mcp`). Lee y ejecuta SQL no destructivo; **las operaciones destructivas (drop) se rechazan desde la extensión de VS Code**, así que esas migraciones las pega el usuario en el SQL Editor.
 
 ## Convenciones
 
@@ -76,15 +82,17 @@ supabase/
 - Primer recuerdo: **"Un buen día para ti, solecito"** (27-10-2026), con clavel SVG que florece y botón "Volver a florecer". Ahora vive en la base (insertado por la migración inicial).
 - Diseño responsive (en móvil, el libro abierto pasa a una columna), página 404 y favicon del trébol.
 - Conexión a Supabase, login con email/contraseña, cierre de sesión, sitio 100 % privado.
-- CMS en `/admin`: listar, crear, editar, borrar (con confirmación) y publicar/borrador.
-- Migración inicial `20261028120000_create_memories.sql` (tabla, RLS, trigger, primer recuerdo).
+- CMS en `/admin`: listar tus páginas, crear, editar, borrar (con confirmación) y elegir visibilidad (borrador, miembros, personas elegidas, pública con enlace).
+- Migraciones: `20261028120000_create_memories.sql` (tabla, RLS, trigger, primer recuerdo) y `20261028150000_memory_visibility_and_ownership.sql` (visibilidad, autoría, profiles, memory_viewers, nuevas políticas).
+- Deploy en Vercel conectado a GitHub, con las variables de Supabase.
 
 ## Pendiente / próximos pasos
 
 - Subir fotos (Supabase Storage, bucket privado) y recuerdos con fotos.
 - Más tipos de páginas: aventuras por vivir, línea de tiempo.
-- Deploy (Vercel) con las mismas variables de entorno.
-- Borrar `src/data/memories.ts` (ya no se usa; el dato vive en la migración).
+- Botón "copiar enlace" para páginas públicas y editar el nombre visible del perfil.
+- Activar "Deploy to production" en la integración de GitHub de Supabase (el historial ya está sincronizado).
+- Activar "Leaked password protection" en Supabase Auth (aviso del advisor).
 - No hay tests todavía.
 
 ## Notas del entorno (Windows)

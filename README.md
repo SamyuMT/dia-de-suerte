@@ -26,10 +26,12 @@ npm start       # servir el build
 
 ## Cómo funciona
 
-- **Todo es privado**: sin sesión, cualquier ruta redirige a `/login` (`src/proxy.ts`).
-- Al entrar se ve el libro (`/`). En el menú, **Crear** abre el panel `/admin`.
-- En el panel se crean, editan, borran y publican (o dejan en borrador) las páginas.
-- Los datos están en la tabla `memories` con RLS: solo usuarios con sesión pueden leer o escribir.
+- **Privado por defecto**: sin sesión, todo redirige a `/login` (`src/proxy.ts`), salvo las páginas marcadas como públicas.
+- Al entrar se ve el libro (`/`). En el menú, **Crear** abre el panel `/admin` con tus páginas.
+- Cada página tiene una visibilidad: **borrador** (solo tú), **miembros** (todos con cuenta),
+  **personas elegidas** (solo quienes marques) o **pública con enlace** (cualquiera con el link).
+- Solo quien escribió una página puede editarla o borrarla. Lo controla el RLS de Supabase.
+- Deploy: Vercel, conectado a GitHub (cada push a `main` publica).
 
 ## Estructura
 

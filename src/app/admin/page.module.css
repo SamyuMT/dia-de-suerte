@@ -110,8 +110,7 @@
   color: var(--ink-soft);
 }
 
-.published,
-.draft {
+.badge {
   padding: 0 8px;
   font-size: 0.72rem;
   letter-spacing: 0.1em;
@@ -120,12 +119,20 @@
   border-radius: 3px;
 }
 
-.published {
+.draft {
+  color: var(--paper-edge);
+}
+
+.members {
   color: #5d7f4a;
 }
 
-.draft {
-  color: var(--paper-edge);
+.selected {
+  color: #7a5f96;
+}
+
+.public {
+  color: #3f7d8e;
 }
 
 .itemActions {

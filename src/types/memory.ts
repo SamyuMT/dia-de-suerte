@@ -2,6 +2,23 @@
 export const MEMORY_DECORATIONS = ["clavel"] as const;
 export type MemoryDecoration = (typeof MEMORY_DECORATIONS)[number];
 
+/**
+ * Quién puede ver una página:
+ * - draft: solo quien la escribió (borrador)
+ * - members: todos los usuarios con sesión
+ * - selected: quien la escribió y los usuarios elegidos
+ * - public: cualquiera con el enlace, incluso sin sesión
+ */
+export const MEMORY_VISIBILITIES = ["draft", "members", "selected", "public"] as const;
+export type MemoryVisibility = (typeof MEMORY_VISIBILITIES)[number];
+
+export const VISIBILITY_LABELS: Record<MemoryVisibility, string> = {
+  draft: "Borrador",
+  members: "Miembros",
+  selected: "Elegidos",
+  public: "Pública",
+};
+
 export interface Memory {
   id: string;
   /** Identificador usado en la URL: /recuerdos/[slug] */
@@ -18,9 +35,20 @@ export interface Memory {
   /** Texto que acompaña a la decoración */
   decorationCaption?: string;
   tags: string[];
-  /** Las páginas sin publicar (borradores) solo se ven en el panel */
-  published: boolean;
+  visibility: MemoryVisibility;
+  /** Id del usuario que la escribió (el único que puede editarla) */
+  createdBy: string | null;
 }
 
 /** Datos que se envían al crear o editar una página. */
-export type MemoryInput = Omit<Memory, "id">;
+export type MemoryInput = Omit<Memory, "id" | "createdBy"> & {
+  /** Usuarios que pueden verla cuando visibility = "selected" */
+  viewerIds: string[];
+};
+
+/** Usuario del libro (tabla profiles). */
+export interface Profile {
+  id: string;
+  email: string;
+  displayName: string;
+}

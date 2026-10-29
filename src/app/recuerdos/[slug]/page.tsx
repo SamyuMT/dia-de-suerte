@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Carnation from "@/components/Carnation";
+import { getCurrentUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { getMemoryBySlug } from "@/lib/memories";
 import styles from "./page.module.css";
@@ -13,19 +14,32 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const memory = await getMemoryBySlug(slug);
-  return memory ? { title: memory.title, description: memory.excerpt } : {};
+  if (!memory) return {};
+  return {
+    title: memory.title,
+    description: memory.excerpt,
+    robots: memory.visibility === "public" ? undefined : { index: false },
+  };
 }
 
 export default async function MemoryPage({ params }: Props) {
   const { slug } = await params;
-  const memory = await getMemoryBySlug(slug);
-  if (!memory) notFound();
+  // El RLS solo devuelve la página si quien la pide puede verla.
+  const [memory, user] = await Promise.all([getMemoryBySlug(slug), getCurrentUser()]);
+  if (!memory) {
+    if (!user) redirect(`/login?next=${encodeURIComponent(`/recuerdos/${slug}`)}`);
+    notFound();
+  }
 
   return (
     <div className="container">
-      <Link href="/#paginas" className={styles.back}>
-        ← Volver al libro
-      </Link>
+      {user ? (
+        <Link href="/#paginas" className={styles.back}>
+          ← Volver al libro
+        </Link>
+      ) : (
+        <span className={styles.back}>Una página de Día de Suerte</span>
+      )}
 
       <article className={styles.book}>
         <div className={`${styles.page} ${styles.left}`}>

@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { MemoryWriteError, createMemory, deleteMemory, updateMemory } from "@/lib/memories";
-import { MEMORY_DECORATIONS, type MemoryDecoration, type MemoryInput } from "@/types/memory";
+import {
+  MEMORY_DECORATIONS,
+  MEMORY_VISIBILITIES,
+  type MemoryDecoration,
+  type MemoryInput,
+  type MemoryVisibility,
+} from "@/types/memory";
 
 export type MemoryFormState = {
   error: string | null;
@@ -54,6 +60,16 @@ function parseForm(formData: FormData): { input?: MemoryInput; error?: string } 
     ? (decorationValue as MemoryDecoration)
     : undefined;
 
+  const visibilityValue = field("visibility");
+  const visibility = MEMORY_VISIBILITIES.includes(visibilityValue as MemoryVisibility)
+    ? (visibilityValue as MemoryVisibility)
+    : "draft";
+
+  const viewerIds = formData.getAll("viewers").map(String).filter(Boolean);
+  if (visibility === "selected" && viewerIds.length === 0) {
+    return { error: "Elige al menos una persona que pueda ver la página." };
+  }
+
   return {
     input: {
       slug,
@@ -69,7 +85,8 @@ function parseForm(formData: FormData): { input?: MemoryInput; error?: string } 
         .split(",")
         .map((t) => t.trim())
         .filter(Boolean),
-      published: formData.get("published") === "on",
+      visibility,
+      viewerIds,
     },
   };
 }
@@ -85,6 +102,7 @@ export async function saveMemory(
   const values = Object.fromEntries(
     [...formData.entries()].filter(([, v]) => typeof v === "string") as [string, string][],
   );
+  values.viewers = formData.getAll("viewers").map(String).join(",");
   const fail = (error: string) => ({ error, values, attempt: prev.attempt + 1 });
 
   const { input, error } = parseForm(formData);
@@ -104,6 +122,7 @@ export async function saveMemory(
 
 export async function removeMemory(id: string) {
   await requireUser();
+  // Si no es su página, el RLS no borra nada y deleteMemory lanza un error.
   await deleteMemory(id);
   revalidatePath("/", "layout");
   redirect("/admin");
