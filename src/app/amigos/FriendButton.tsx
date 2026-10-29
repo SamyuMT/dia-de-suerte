@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useDialog, type DialogOptions } from "@/components/dialog/useDialog";
 import type { FriendActionResult } from "./actions";
 import styles from "./page.module.css";
 
@@ -8,35 +10,44 @@ interface FriendButtonProps {
   action: () => Promise<FriendActionResult>;
   label: string;
   pendingLabel: string;
-  /** Pregunta antes de hacerlo (para acciones que no se deshacen) */
-  confirmText?: string;
+  /** Si se da, primero pregunta en un modal */
+  confirm?: DialogOptions;
+  /** Título del modal cuando sale bien */
+  doneTitle: string;
   variant?: "primary" | "quiet" | "danger";
 }
 
-/** Botón que ejecuta una acción de amistad y muestra su resultado al lado. */
-export default function FriendButton({ action, label, pendingLabel, confirmText, variant = "quiet" }: FriendButtonProps) {
-  const [pending, startTransition] = useTransition();
-  const [message, setMessage] = useState<FriendActionResult | null>(null);
+/** Botón de una acción de amistad: confirma (si hace falta) y muestra el resultado en un modal. */
+export default function FriendButton({
+  action,
+  label,
+  pendingLabel,
+  confirm: confirmOptions,
+  doneTitle,
+  variant = "quiet",
+}: FriendButtonProps) {
+  const [pending, setPending] = useState(false);
+  const { confirm, notify, dialog } = useDialog();
+  const router = useRouter();
+
+  const run = async () => {
+    if (confirmOptions && !(await confirm(confirmOptions))) return;
+    setPending(true);
+    const result = await action().finally(() => setPending(false));
+    if (result.error) {
+      await notify({ title: "No se pudo", message: result.error, tone: "error" });
+      return;
+    }
+    await notify({ title: doneTitle, message: result.done, tone: "success" });
+    router.refresh();
+  };
 
   return (
-    <span className={styles.actionWrap}>
-      <button
-        type="button"
-        className={styles[variant]}
-        disabled={pending}
-        onClick={() => {
-          if (confirmText && !confirm(confirmText)) return;
-          startTransition(async () => setMessage(await action()));
-        }}
-      >
+    <>
+      <button type="button" className={styles[variant]} disabled={pending} onClick={run}>
         {pending ? pendingLabel : label}
       </button>
-      {message?.error && (
-        <span className={styles.error} role="alert">
-          {message.error}
-        </span>
-      )}
-      {message?.done && <span className={styles.done}>{message.done}</span>}
-    </span>
+      {dialog}
+    </>
   );
 }

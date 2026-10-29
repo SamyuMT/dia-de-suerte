@@ -34,8 +34,8 @@ npm start       # servir el build
 - Las fotos, GIFs y canciones se guardan en Supabase Storage (bucket privado `media`).
 - Cada recuerdo tiene una visibilidad: **borrador** (solo tú), **mis amigos**, **amigos elegidos**
   o **público con enlace** (cualquiera con el link). Máximo 4 fotos por página.
-- **Amigos**: buscas a alguien por su apodo y le envías una solicitud; cuando la acepta, pueden compartirse
-  recuerdos. Los demás solo ven tu apodo, nunca tu correo.
+- **Amigos**: escribes el apodo exacto de alguien y, si existe, le envías una solicitud; cuando la acepta,
+  pueden compartirse recuerdos. Nadie puede ver la lista de usuarios ni tu correo, solo tu apodo.
 - Solo quien escribió un recuerdo puede editarlo o borrarlo. Lo controla el RLS de Supabase.
 - ¿Olvidaste la contraseña? En `/recuperar` te llega un código al correo. En **Mi cuenta** cambias tu nombre
   y tu contraseña, o cierras sesión.

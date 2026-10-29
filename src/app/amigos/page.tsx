@@ -3,13 +3,9 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getDirectory } from "@/lib/profiles";
 import type { DirectoryEntry } from "@/types/memory";
-import {
-  acceptRequestAction,
-  declineRequestAction,
-  removeFriendshipAction,
-  sendRequestAction,
-} from "./actions";
+import { acceptRequestAction, declineRequestAction, removeFriendshipAction } from "./actions";
 import FriendButton from "./FriendButton";
+import FriendSearch from "./FriendSearch";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -18,6 +14,7 @@ export const metadata: Metadata = {
 };
 
 function Person({ entry }: { entry: DirectoryEntry }) {
+  const name = <strong>{entry.displayName}</strong>;
   return (
     <li className={styles.person}>
       <span className={styles.avatar} aria-hidden="true">
@@ -32,11 +29,19 @@ function Person({ entry }: { entry: DirectoryEntry }) {
               label="Aceptar"
               pendingLabel="Aceptando…"
               variant="primary"
+              doneTitle="¡Ahora son amigos!"
             />
             <FriendButton
               action={declineRequestAction.bind(null, entry.requestId)}
               label="Rechazar"
               pendingLabel="…"
+              doneTitle="Solicitud rechazada"
+              confirm={{
+                title: "¿Rechazar la solicitud?",
+                message: <p>{name} no sabrá que la rechazaste, pero podrá volver a enviarte otra.</p>,
+                confirmLabel: "Rechazar",
+                tone: "danger",
+              }}
             />
           </>
         )}
@@ -45,6 +50,14 @@ function Person({ entry }: { entry: DirectoryEntry }) {
             action={removeFriendshipAction.bind(null, entry.id)}
             label="Cancelar solicitud"
             pendingLabel="Cancelando…"
+            doneTitle="Solicitud cancelada"
+            confirm={{
+              title: "¿Cancelar la solicitud?",
+              message: <p>Le quitarás la solicitud que le enviaste a {name}.</p>,
+              confirmLabel: "Cancelar solicitud",
+              cancelLabel: "Dejarla",
+              tone: "danger",
+            }}
           />
         )}
         {entry.status === "friends" && (
@@ -53,15 +66,18 @@ function Person({ entry }: { entry: DirectoryEntry }) {
             label="Dejar de ser amigos"
             pendingLabel="…"
             variant="danger"
-            confirmText={`¿Dejar de ser amigos de ${entry.displayName}? Ya no verán los recuerdos que se compartieron.`}
-          />
-        )}
-        {entry.status === "none" && (
-          <FriendButton
-            action={sendRequestAction.bind(null, entry.id)}
-            label="+ Enviar solicitud"
-            pendingLabel="Enviando…"
-            variant="primary"
+            doneTitle="Ya no son amigos"
+            confirm={{
+              title: "¿Dejar de ser amigos?",
+              message: (
+                <>
+                  <p>Tú y {name} dejarán de ver los recuerdos que se compartieron.</p>
+                  <p>Podrán volver a ser amigos con una nueva solicitud.</p>
+                </>
+              ),
+              confirmLabel: "Dejar de ser amigos",
+              tone: "danger",
+            }}
           />
         )}
       </span>
@@ -89,18 +105,10 @@ function Section({ title, entries, empty }: { title: string; entries: DirectoryE
   );
 }
 
-export default async function FriendsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function FriendsPage() {
   await requireUser();
-  const { q = "" } = await searchParams;
+  // Solo trae a las personas con las que hay relación (el RLS no deja ver a nadie más).
   const directory = await getDirectory();
-  const query = q.trim().toLowerCase();
-
-  const received = directory.filter((e) => e.status === "received");
-  const friends = directory.filter((e) => e.status === "friends");
-  const sent = directory.filter((e) => e.status === "sent");
-  const others = directory.filter(
-    (e) => e.status === "none" && (!query || e.displayName.toLowerCase().includes(query)),
-  );
 
   return (
     <div className={`container ${styles.wrap}`}>
@@ -110,40 +118,22 @@ export default async function FriendsPage({ searchParams }: { searchParams: Prom
       <div className={styles.card}>
         <h1 className={styles.title}>Amigos</h1>
         <p className={styles.note}>
-          Solo puedes compartir recuerdos con tus amigos. Envía una solicitud y, cuando la acepten, aparecerán al
-          compartir. Los demás solo ven tu apodo, nunca tu correo.
+          Solo puedes compartir recuerdos con tus amigos. Nadie puede ver la lista de usuarios: para agregar a alguien
+          necesitas su apodo exacto.
         </p>
 
-        <Section title="Te quieren agregar" entries={received} />
-        <Section title="Mis amigos" entries={friends} empty="Todavía no tienes amigos en el libro." />
-        <Section title="Solicitudes enviadas" entries={sent} />
-
         <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Buscar personas</h2>
-          <form className={styles.search} role="search">
-            <input
-              className={styles.input}
-              type="search"
-              name="q"
-              defaultValue={q}
-              placeholder="Buscar por apodo"
-              aria-label="Buscar por apodo"
-              autoCapitalize="none"
-            />
-            <button type="submit" className={styles.quiet}>
-              Buscar
-            </button>
-          </form>
-          {others.length === 0 ? (
-            <p className={styles.empty}>{query ? "Nadie con ese apodo." : "No hay más personas en el libro."}</p>
-          ) : (
-            <ul className={styles.list}>
-              {others.map((entry) => (
-                <Person key={entry.id} entry={entry} />
-              ))}
-            </ul>
-          )}
+          <h2 className={styles.sectionTitle}>Agregar un amigo</h2>
+          <FriendSearch />
         </section>
+
+        <Section title="Te quieren agregar" entries={directory.filter((e) => e.status === "received")} />
+        <Section
+          title="Mis amigos"
+          entries={directory.filter((e) => e.status === "friends")}
+          empty="Todavía no tienes amigos en el libro."
+        />
+        <Section title="Solicitudes enviadas" entries={directory.filter((e) => e.status === "sent")} />
       </div>
     </div>
   );

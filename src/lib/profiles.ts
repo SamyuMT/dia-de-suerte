@@ -72,7 +72,31 @@ export async function getFriends(): Promise<Profile[]> {
   return (await getDirectory()).filter((entry) => entry.status === "friends");
 }
 
-/** Todos los demás usuarios con su relación conmigo, ordenados por apodo. */
+/**
+ * Busca a alguien por su apodo exacto (sin importar mayúsculas), con su relación conmigo.
+ * Es la única forma de encontrar a quien todavía no es amigo: el directorio completo no es visible.
+ */
+export async function findByNickname(nickname: string): Promise<DirectoryEntry | null> {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  if (!userId) return null;
+
+  const { data, error } = await supabase.rpc("find_profile_by_nickname", { p_nickname: nickname });
+  if (error) throw new Error(`Error buscando el apodo: ${error.message}`);
+  const row = (data as ProfileRow[])[0];
+  if (!row) return null;
+
+  const f = (await myFriendships(supabase, userId)).find(
+    (f) => f.requester_id === row.id || f.addressee_id === row.id,
+  );
+  const status = !f ? "none" : f.status === "accepted" ? "friends" : f.requester_id === userId ? "sent" : "received";
+  return { ...toProfile(row), status, requestId: status === "received" ? f?.id : undefined };
+}
+
+/**
+ * Personas con las que tengo relación (amigos y solicitudes), ordenadas por apodo.
+ * El RLS de profiles solo deja ver a estas personas.
+ */
 export async function getDirectory(): Promise<DirectoryEntry[]> {
   const supabase = await createClient();
   const userId = await currentUserId(supabase);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useDialog } from "@/components/dialog/useDialog";
 import type { MediaItem, MediaKind } from "@/types/memory";
 import { deleteMediaAction } from "../actions";
 import { ACCEPT, uploadMedia } from "./upload";
@@ -38,6 +39,7 @@ export default function MediaPicker({
   const [uploading, setUploading] = useState(0);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { confirm, notify, dialog } = useDialog();
   const items = library.filter((m) => kinds.includes(m.kind));
   const isAudio = kinds.includes("audio");
   const full = room <= 0;
@@ -62,13 +64,26 @@ export default function MediaPicker({
   };
 
   const remove = async (item: MediaItem) => {
-    const name = item.originalName ?? (isAudio ? "esta canción" : "esta foto");
-    if (!confirm(`¿Borrar "${name}" de tu biblioteca? No se puede deshacer.`)) return;
+    const what = isAudio ? "esta canción" : item.kind === "gif" ? "este GIF" : "esta foto";
+    const ok = await confirm({
+      title: `¿Borrar ${what}?`,
+      tone: "danger",
+      message: (
+        <>
+          {item.kind !== "audio" && (
+            <img src={item.url} alt="" style={{ maxWidth: 140, maxHeight: 140, margin: "0 auto 10px", display: "block" }} />
+          )}
+          <p>Se borra de tu biblioteca para siempre{item.originalName ? <> ({item.originalName})</> : null}.</p>
+        </>
+      ),
+      confirmLabel: "Borrar",
+    });
+    if (!ok) return;
     setError(null);
     setDeleting(item.id);
     const result = await deleteMediaAction(item.id);
     setDeleting(null);
-    if (result.error) setError(result.error);
+    if (result.error) await notify({ title: "No se pudo borrar", tone: "error", message: result.error });
     else onDeleted(item.id);
   };
 
@@ -139,6 +154,7 @@ export default function MediaPicker({
           </div>
         </>
       )}
+      {dialog}
     </div>
   );
 }

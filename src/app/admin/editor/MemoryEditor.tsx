@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import BookView from "@/components/book/BookView";
+import { useDialog } from "@/components/dialog/useDialog";
 import {
   BLOCK_INFO,
   BLOCK_TYPES,
@@ -80,6 +81,7 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
   const [media, setMedia] = useState<MediaItem[]>(library);
   const [error, setError] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+  const { confirm, notify, dialog } = useDialog();
 
   const page = pages[current];
   const pagePhotos = photoCount(page.blocks);
@@ -95,11 +97,22 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
     setCurrent(current + 1);
   };
 
-  const removePage = () => {
+  const removePage = async () => {
     if (pages.length === 1) return;
-    if (page.blocks.length > 0 && !confirm(`¿Quitar la página ${current + 1} con todo lo que tiene?`)) return;
-    updatePages((prev) => prev.filter((_, i) => i !== current));
-    setCurrent(Math.max(0, current - 1));
+    const index = current;
+    if (
+      page.blocks.length > 0 &&
+      !(await confirm({
+        title: `¿Quitar la página ${index + 1}?`,
+        tone: "danger",
+        message: "Se quita con todo lo que tiene. Las fotos y canciones siguen en tu biblioteca.",
+        confirmLabel: "Quitar página",
+      }))
+    ) {
+      return;
+    }
+    updatePages((prev) => prev.filter((_, i) => i !== index));
+    setCurrent(Math.max(0, index - 1));
   };
 
   const movePage = (to: number) => {
@@ -157,7 +170,10 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
         })),
       });
       // Si guardó, la acción redirige al panel; si no, devuelve el error.
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+        notify({ title: "Falta algo", tone: "error", message: result.error });
+      }
     });
   };
 
@@ -279,10 +295,16 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
               onChange={(updated) =>
                 setBlocks(current, (blocks) => blocks.map((b, j) => (j === i ? { ...updated, key: b.key } : b)))
               }
-              onRemove={() => {
-                if (confirm(`¿Quitar este bloque de ${BLOCK_INFO[block.type].label.toLowerCase()}?`)) {
-                  setBlocks(current, (blocks) => blocks.filter((_, j) => j !== i));
-                }
+              onRemove={async () => {
+                const pageIndex = current;
+                const ok = await confirm({
+                  title: `¿Quitar el bloque de ${BLOCK_INFO[block.type].label.toLowerCase()}?`,
+                  icon: BLOCK_INFO[block.type].icon,
+                  tone: "danger",
+                  message: "Se quita de esta página. Si tenía fotos o una canción, siguen en tu biblioteca.",
+                  confirmLabel: "Quitar bloque",
+                });
+                if (ok) setBlocks(pageIndex, (blocks) => blocks.filter((b) => b.key !== block.key));
               }}
               onMoveUp={i > 0 ? () => moveBlock(i, i - 1) : undefined}
               onMoveDown={i < page.blocks.length - 1 ? () => moveBlock(i, i + 1) : undefined}
@@ -371,6 +393,7 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
           </button>
         </div>
       </div>
+      {dialog}
     </div>
   );
 }

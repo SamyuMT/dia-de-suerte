@@ -34,7 +34,7 @@ src/
 │  ├─ login/                   page, LoginForm (client), actions.ts (login / logout)
 │  ├─ recuperar/               Recuperar contraseña con código OTP al correo (2 pasos)
 │  ├─ cuenta/                  Mi cuenta: apodo, cambiar contraseña, cerrar sesión
-│  ├─ amigos/                  Solicitudes recibidas/enviadas, mis amigos, buscar por apodo (FriendButton)
+│  ├─ amigos/                  Agregar por apodo exacto (FriendSearch), solicitudes recibidas/enviadas, mis amigos (FriendButton)
 │  ├─ admin/                   CMS: listado (page), nueva/ (elegir tipo → editor), [id]/ (editar),
 │  │  │                        DeleteButton, actions.ts (saveMemoryAction, removeMemory, registerMediaAction)
 │  │  └─ editor/               MemoryEditor (vista previa + páginas), BlockEditor, MediaPicker,
@@ -45,6 +45,7 @@ src/
 │  │                           BookPage, TextBlock, PhotosBlock, MusicDisc (vinilo + <audio>), GifBlock.
 │  │                           Se usan en lectura y en la vista previa del editor.
 │  ├─ MobileMenu               Menú lateral (☰) en ≤ 900 px; SiteHeader muestra la barra normal en escritorio
+│  ├─ dialog/                  Modal (<dialog> con estilo de nota) + useDialog(): confirm() y notify() con promesas
 │  └─ BookCover, Polaroid, MemoryCard, Carnation, Clover, SiteHeader, SiteFooter
 ├─ lib/
 │  ├─ memories.ts              Recuerdos: getMemories, getMyMemories, getMemoryBySlug, getMyMemoryById,
@@ -70,6 +71,7 @@ supabase/
 - Cambiar contraseña en `/cuenta` pide la actual (se verifica con `signInWithPassword`).
 - Header: con sesión muestra Inicio · Recuerdos · **Crear** (→ `/admin`) · Amigos (con número de solicitudes) · Mi cuenta · Salir. En ≤ 900 px pasa al menú lateral.
 - **Apodo** (`profiles.display_name`): único (sin importar mayúsculas), 3–30 caracteres `[A-Za-z0-9_.-]` + tildes/ñ. Es lo único que ven los demás: la columna `email` de profiles no es legible por los usuarios.
+- **Directorio privado**: el RLS de `profiles` solo deja ver tu perfil, el de tus amigos y el de quienes tienen una solicitud contigo (`private.has_friendship_with`). Para agregar a alguien hay que escribir su apodo exacto: `find_profile_by_nickname(p_nickname)`.
 - **Amigos** (`friendships`): solicitud `pending` → la otra persona acepta (`accepted`) o rechaza (se borra). Si ambos se envían solicitud, queda aceptada. Solo se escribe con `send_friend_request`, `respond_friend_request`, `remove_friendship`. Dejar de ser amigos quita también los `memory_viewers` entre ambos.
 - Las páginas de `/admin`, `/cuenta` y las server actions llaman a `requireUser()` (no confiar solo en el proxy).
 
@@ -95,6 +97,7 @@ memories ─┬─ memory_pages (position) ── memory_blocks (position, type)
 
 - **Las páginas nunca consultan Supabase directamente**: pasan por `src/lib/*.ts` (mapean snake_case ↔ camelCase).
 - Crear un cliente de Supabase **por petición** (`await createClient()` de `src/lib/supabase/server.ts`). En el navegador solo se usa `browser.ts` para subir archivos a Storage (evita el límite de tamaño de las server actions de Vercel).
+- **Nada de `confirm()`/`alert()` del navegador**: confirmaciones, envíos, borrados y resultados usan `useDialog()` (`src/components/dialog`). Mientras el modal está abierto no se muestra "cargando" (estado `pending` solo durante la petición).
 - Formularios simples: server actions + `useActionState` (+ `attempt` como `key` para no perder lo escrito). El editor de recuerdos mantiene el estado en el cliente y llama a `saveMemoryAction` con un objeto `MemoryInput`.
 - Cada componente tiene su `Componente.module.css` al lado. Los colores salen de las variables de `globals.css`. Las texturas son CSS (`var(--noise)`), sin imágenes externas.
 - Sin `Math.random()` en render (servidor y cliente deben coincidir): `Carnation` usa PRNG con semilla fija y `PhotosBlock` inclinaciones fijas. Animaciones respetan `prefers-reduced-motion` (el vinilo se detiene).
@@ -107,7 +110,10 @@ memories ─┬─ memory_pages (position) ── memory_blocks (position, type)
 - Login, recuperar contraseña con código, Mi cuenta (nombre, contraseña, salir). Sitio privado por defecto.
 - CMS en `/admin`: elegir tipo (pensamiento, álbum, disco, GIF), editor con vista previa del libro, varias páginas, mover bloques entre páginas, subir archivos o elegirlos de la biblioteca, visibilidad y personas elegidas, borrar.
 - Migraciones: `20261028120000_create_memories`, `20261028150000_memory_visibility_and_ownership`, `20261029120000_pages_blocks_media` (páginas, bloques, media, Storage, save_memory), `20261030120000_friends_nicknames_photo_limit` (apodos únicos, correos privados, amistades, members → friends, 4 fotos por página).
-- Amigos con solicitudes, apodo en Mi cuenta, borrar archivos de la biblioteca.
+- Amigos con solicitudes (buscar por apodo exacto, sin lista de usuarios), apodo en Mi cuenta, borrar archivos de la biblioteca.
+- Migración `20261029041725_private_directory` (aplicada por MCP; su versión es la hora real en que se aplicó).
+- Modales propios para todas las confirmaciones y resultados.
+- Fotos reducidas en el navegador a 1200 px (WebP/JPEG) antes de subirlas; volumen del disco (50 % por defecto, se recuerda).
 - Diseño de celular y tablet: menú lateral, libro de una página con swipe en celular, polaroids de la portada en fila deslizable, formularios con campos de 16 px y botones táctiles.
 - Deploy en Vercel conectado a GitHub.
 

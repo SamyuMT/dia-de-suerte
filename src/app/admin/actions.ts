@@ -132,12 +132,17 @@ export async function saveMemoryAction(id: string | null, raw: MemoryInput): Pro
   redirect("/admin");
 }
 
-export async function removeMemory(id: string) {
+export async function removeMemory(id: string): Promise<{ error?: string }> {
   await requireUser();
-  // Si no es su recuerdo, el RLS no borra nada y deleteMemory lanza un error.
-  await deleteMemory(id);
+  try {
+    // Si no es su recuerdo, el RLS no borra nada y deleteMemory lanza un error.
+    await deleteMemory(id);
+  } catch (e) {
+    if (e instanceof MemoryWriteError) return { error: e.message };
+    throw e;
+  }
   revalidatePath("/", "layout");
-  redirect("/admin");
+  return {};
 }
 
 /** Borra un archivo de la biblioteca del usuario (si no está en un recuerdo guardado). */
