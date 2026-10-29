@@ -43,8 +43,20 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* 3 o 4 fotos: siempre en cuadrícula de 2 columnas */
 .many {
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 699px) {
+  .photoGrid {
+    gap: 20px 14px;
+    padding: 8px 2px;
+  }
+
+  .one {
+    grid-template-columns: minmax(0, 260px);
+  }
 }
 
 .photo {

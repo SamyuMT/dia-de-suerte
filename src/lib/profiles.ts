@@ -1,51 +1,146 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Profile } from "@/types/memory";
+import type { DirectoryEntry, Profile } from "@/types/memory";
 
-// Directorio de usuarios del libro (tabla profiles).
+// Usuarios del libro (tabla profiles) y amistades (tabla friendships).
+// De los demás solo se puede leer el apodo; los correos no se exponen.
+// Las amistades se escriben con las funciones send_friend_request, respond_friend_request
+// y remove_friendship de la base.
+
+/** Apodo: 3 a 30 letras, números, punto, guion o guion bajo (igual que en la base). */
+export const NICKNAME_PATTERN = /^[A-Za-z0-9_.ÁÉÍÓÚÜÑáéíóúüñ-]{3,30}$/;
 
 interface ProfileRow {
   id: string;
-  email: string;
-  display_name: string | null;
+  display_name: string;
 }
 
-function toProfile(row: ProfileRow): Profile {
-  return { id: row.id, email: row.email, displayName: row.display_name ?? row.email };
+interface FriendshipRow {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: "pending" | "accepted";
 }
 
-/** Los demás usuarios del libro (para elegir con quién compartir). */
-export async function getOtherProfiles(): Promise<Profile[]> {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
+const toProfile = (row: ProfileRow): Profile => ({ id: row.id, displayName: row.display_name });
+
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+async function currentUserId(supabase: Supabase) {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.id ?? null;
+}
+
+async function myFriendships(supabase: Supabase, userId: string): Promise<FriendshipRow[]> {
   const { data, error } = await supabase
-    .from("profiles")
-    .select("id, email, display_name")
-    .neq("id", auth.user?.id ?? "")
-    .order("display_name");
-  if (error) throw new Error(`Error leyendo usuarios: ${error.message}`);
-  return (data as ProfileRow[]).map(toProfile);
+    .from("friendships")
+    .select("id, requester_id, addressee_id, status")
+    .or(`requester_id.eq.${userId},addressee_id.eq.${userId}`);
+  if (error) throw new Error(`Error leyendo amistades: ${error.message}`);
+  return data as FriendshipRow[];
 }
 
-export async function getMyProfile(): Promise<Profile | null> {
+/** Mi perfil: apodo (de profiles) y correo (de mi sesión). */
+export async function getMyProfile(): Promise<(Profile & { email: string }) | null> {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, display_name")
+    .select("id, display_name")
     .eq("id", auth.user.id)
     .maybeSingle();
   if (error) throw new Error(`Error leyendo tu perfil: ${error.message}`);
-  return data ? toProfile(data as ProfileRow) : null;
+  if (!data) return null;
+  return { ...toProfile(data as ProfileRow), email: auth.user.email ?? "" };
 }
 
-export async function updateMyDisplayName(displayName: string): Promise<void> {
+/** Error al guardar el apodo con un mensaje listo para mostrar. */
+export class NicknameError extends Error {}
+
+export async function updateMyNickname(nickname: string): Promise<void> {
   const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) throw new Error("Necesitas iniciar sesión.");
-  const { error } = await supabase
-    .from("profiles")
-    .update({ display_name: displayName })
-    .eq("id", auth.user.id);
-  if (error) throw new Error(`No se pudo guardar tu nombre: ${error.message}`);
+  const userId = await currentUserId(supabase);
+  if (!userId) throw new NicknameError("Necesitas iniciar sesión.");
+  const { error } = await supabase.from("profiles").update({ display_name: nickname }).eq("id", userId);
+  if (error?.code === "23505") throw new NicknameError("Ese apodo ya lo usa alguien. Prueba con otro.");
+  if (error?.code === "23514") throw new NicknameError("El apodo solo puede tener letras, números, punto y guiones.");
+  if (error) throw new NicknameError(`No se pudo guardar tu apodo: ${error.message}`);
+}
+
+/** Mis amigos (para compartir recuerdos con ellos). */
+export async function getFriends(): Promise<Profile[]> {
+  return (await getDirectory()).filter((entry) => entry.status === "friends");
+}
+
+/** Todos los demás usuarios con su relación conmigo, ordenados por apodo. */
+export async function getDirectory(): Promise<DirectoryEntry[]> {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  if (!userId) return [];
+
+  const [{ data, error }, friendships] = await Promise.all([
+    supabase.from("profiles").select("id, display_name").neq("id", userId).order("display_name"),
+    myFriendships(supabase, userId),
+  ]);
+  if (error) throw new Error(`Error leyendo usuarios: ${error.message}`);
+
+  const byOther = new Map(
+    friendships.map((f) => [f.requester_id === userId ? f.addressee_id : f.requester_id, f]),
+  );
+
+  return (data as ProfileRow[]).map((row) => {
+    const f = byOther.get(row.id);
+    const status = !f
+      ? "none"
+      : f.status === "accepted"
+        ? "friends"
+        : f.requester_id === userId
+          ? "sent"
+          : "received";
+    return { ...toProfile(row), status, requestId: status === "received" ? f?.id : undefined };
+  });
+}
+
+/** Solicitudes de amistad que me enviaron y no he respondido (para el aviso del menú). */
+export async function getPendingRequestCount(): Promise<number> {
+  const supabase = await createClient();
+  const userId = await currentUserId(supabase);
+  if (!userId) return 0;
+  const { count, error } = await supabase
+    .from("friendships")
+    .select("id", { count: "exact", head: true })
+    .eq("addressee_id", userId)
+    .eq("status", "pending");
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/** Error de una acción de amistad con un mensaje listo para mostrar. */
+export class FriendError extends Error {}
+
+function friendError(error: { code?: string; message: string }): never {
+  // Los mensajes de las funciones de la base ya vienen en español.
+  if (error.code === "P0001" || error.code === "42501") throw new FriendError(error.message);
+  throw new FriendError(`No se pudo completar: ${error.message}`);
+}
+
+/** Envía una solicitud. Si la otra persona ya me había enviado una, quedamos como amigos. */
+export async function sendFriendRequest(userId: string): Promise<"sent" | "accepted"> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("send_friend_request", { p_user_id: userId });
+  if (error) friendError(error);
+  return data as "sent" | "accepted";
+}
+
+export async function respondFriendRequest(requestId: string, accept: boolean): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("respond_friend_request", { p_request_id: requestId, p_accept: accept });
+  if (error) friendError(error);
+}
+
+/** Cancela una solicitud enviada o deja de ser amigos. */
+export async function removeFriendship(userId: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("remove_friendship", { p_user_id: userId });
+  if (error) friendError(error);
 }

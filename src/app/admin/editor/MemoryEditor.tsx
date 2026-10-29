@@ -7,6 +7,7 @@ import {
   BLOCK_INFO,
   BLOCK_TYPES,
   KIND_INFO,
+  MAX_PHOTOS_PER_PAGE,
   MEMORY_KINDS,
   type BlockType,
   type MediaItem,
@@ -23,8 +24,8 @@ import styles from "./MemoryEditor.module.css";
 
 const VISIBILITY_OPTIONS: { value: MemoryVisibility; label: string; hint: string }[] = [
   { value: "draft", label: "Borrador", hint: "Solo tú lo ves." },
-  { value: "members", label: "Miembros", hint: "Todos los que tienen cuenta en el libro." },
-  { value: "selected", label: "Personas elegidas", hint: "Solo tú y quienes marques." },
+  { value: "friends", label: "Mis amigos", hint: "Todos tus amigos del libro." },
+  { value: "selected", label: "Amigos elegidos", hint: "Solo tú y los amigos que marques." },
   { value: "public", label: "Público con enlace", hint: "Cualquiera con el enlace, aunque no tenga cuenta." },
 ];
 
@@ -51,9 +52,13 @@ interface MemoryEditorProps {
   /** Al crear: el tipo elegido */
   kind?: MemoryKind;
   viewerIds?: string[];
+  /** Amigos del usuario (con quienes puede compartir) */
   profiles: Profile[];
   library: MediaItem[];
 }
+
+const photoCount = (blocks: MemoryBlock[]) =>
+  blocks.filter((b) => b.type === "photos").reduce((n, b) => n + b.media.length, 0);
 
 /** Editor de un recuerdo: datos, páginas y bloques, con vista previa del libro. */
 export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles, library }: MemoryEditorProps) {
@@ -63,8 +68,11 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
   const [excerpt, setExcerpt] = useState(memory?.excerpt ?? "");
   const [tags, setTags] = useState(memory?.tags.join(", ") ?? "");
   const [memoryKind, setMemoryKind] = useState<MemoryKind>(memory?.kind ?? kind ?? "pensamiento");
-  const [visibility, setVisibility] = useState<MemoryVisibility>(memory?.visibility ?? "members");
-  const [viewers, setViewers] = useState<string[]>(viewerIds ?? []);
+  const [visibility, setVisibility] = useState<MemoryVisibility>(memory?.visibility ?? "friends");
+  // Solo se puede compartir con amigos: quien dejó de serlo se quita de la lista.
+  const [viewers, setViewers] = useState<string[]>(() =>
+    (viewerIds ?? []).filter((id) => profiles.some((p) => p.id === id)),
+  );
   const [pages, setPages] = useState<EditorPage[]>(() =>
     toEditorPages(memory ? memory.pages.map((p) => p.blocks) : templatePages(kind ?? "pensamiento")),
   );
@@ -74,6 +82,8 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
   const [saving, startSaving] = useTransition();
 
   const page = pages[current];
+  const pagePhotos = photoCount(page.blocks);
+  const usedIds = new Set(pages.flatMap((p) => p.blocks.flatMap((b) => b.media.map((bm) => bm.media.id))));
 
   const updatePages = (fn: (pages: EditorPage[]) => EditorPage[]) => setPages((prev) => fn(prev));
 
@@ -250,7 +260,13 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
           </div>
         </div>
 
-        <h2 className={styles.pageTitle}>Página {current + 1}</h2>
+        <h2 className={styles.pageTitle}>
+          Página {current + 1}
+          <span className={styles.hint}>
+            {" "}
+            · {pagePhotos}/{MAX_PHOTOS_PER_PAGE} fotos
+          </span>
+        </h2>
 
         <div className={styles.blocks}>
           {page.blocks.length === 0 && (
@@ -272,9 +288,12 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
               onMoveDown={i < page.blocks.length - 1 ? () => moveBlock(i, i + 1) : undefined}
               onToPrevPage={current > 0 ? () => blockToPage(i, -1) : undefined}
               onToNextPage={() => blockToPage(i, 1)}
+              pageRoom={MAX_PHOTOS_PER_PAGE - (pagePhotos - photoCount([block]))}
               library={media}
               userId={userId}
+              usedIds={usedIds}
               onLibraryAdd={(items) => setMedia((prev) => [...items, ...prev])}
+              onLibraryDelete={(id) => setMedia((prev) => prev.filter((m) => m.id !== id))}
             />
           ))}
         </div>
@@ -312,7 +331,10 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
           {visibility === "selected" && (
             <div className={styles.viewers}>
               {profiles.length === 0 ? (
-                <p className={styles.hint}>Todavía no hay más usuarios en el libro.</p>
+                <p className={styles.hint}>
+                  Todavía no tienes amigos en el libro. <Link href="/amigos">Envía una solicitud</Link> y, cuando la
+                  acepten, podrás compartir con ellos.
+                </p>
               ) : (
                 profiles.map((profile) => (
                   <label key={profile.id} className={styles.check}>
@@ -325,9 +347,7 @@ export default function MemoryEditor({ userId, memory, kind, viewerIds, profiles
                         )
                       }
                     />
-                    <span>
-                      {profile.displayName} <span className={styles.hint}>{profile.email}</span>
-                    </span>
+                    <span>{profile.displayName}</span>
                   </label>
                 ))
               )}

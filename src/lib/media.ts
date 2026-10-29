@@ -87,6 +87,22 @@ export function mediaKindFor(mimeType: string): MediaKind | null {
   return null;
 }
 
+/** Borra un archivo del usuario (fila y objeto en Storage). Falla si está en un recuerdo guardado. */
+export async function deleteMedia(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("media").delete().eq("id", id).select("storage_path");
+  if (error?.code === "23503") {
+    throw new Error("Esta foto está en un recuerdo guardado. Quítala del recuerdo y guarda primero.");
+  }
+  if (error) throw new Error(`No se pudo borrar: ${error.message}`);
+  if (data.length === 0) throw new Error("Ese archivo no existe o no es tuyo.");
+
+  const { error: storageError } = await supabase.storage
+    .from(MEDIA_BUCKET)
+    .remove(data.map((d) => d.storage_path as string));
+  if (storageError) throw new Error(`Se quitó de tu biblioteca, pero no del almacenamiento: ${storageError.message}`);
+}
+
 /** Registra en la tabla media un archivo que ya se subió a la carpeta del usuario. */
 export async function registerMedia(input: NewMedia): Promise<MediaItem> {
   const supabase = await createClient();

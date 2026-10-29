@@ -215,3 +215,33 @@
 .danger:hover {
   text-decoration: underline;
 }
+
+@media (max-width: 699px) {
+  .wrap {
+    padding-top: 24px;
+  }
+
+  .card {
+    padding: 24px 16px;
+  }
+
+  .title {
+    font-size: 2.2rem;
+  }
+
+  .primary {
+    width: 100%;
+    text-align: center;
+  }
+
+  .itemActions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .link,
+  .danger {
+    min-height: 40px;
+    padding: 4px 6px;
+  }
+}

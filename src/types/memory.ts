@@ -1,18 +1,18 @@
 /**
  * Quién puede ver un recuerdo:
  * - draft: solo quien lo escribió (borrador)
- * - members: todos los usuarios con sesión
- * - selected: quien lo escribió y los usuarios elegidos
+ * - friends: todos los amigos de quien lo escribió
+ * - selected: quien lo escribió y los amigos elegidos
  * - public: cualquiera con el enlace, incluso sin sesión
  */
-export const MEMORY_VISIBILITIES = ["draft", "members", "selected", "public"] as const;
+export const MEMORY_VISIBILITIES = ["draft", "friends", "selected", "public"] as const;
 export type MemoryVisibility = (typeof MEMORY_VISIBILITIES)[number];
 
 export const VISIBILITY_LABELS: Record<MemoryVisibility, string> = {
   draft: "Borrador",
-  members: "Miembros",
+  friends: "Amigos",
   selected: "Elegidos",
-  public: "Pública",
+  public: "Público",
 };
 
 /** Tipo principal de un recuerdo: decide su plantilla inicial y su icono. */
@@ -38,10 +38,13 @@ export const BLOCK_INFO: Record<BlockType, { label: string; icon: string }> = {
   decoration: { label: "Clavel", icon: "🌸" },
 };
 
+/** Máximo de fotos en una misma página del libro (lo valida también save_memory). */
+export const MAX_PHOTOS_PER_PAGE = 4;
+
 /** Cuántos archivos admite cada tipo de bloque (lo valida también save_memory en la base). */
 export const BLOCK_MEDIA_LIMITS: Record<BlockType, { min: number; max: number }> = {
   text: { min: 0, max: 0 },
-  photos: { min: 1, max: 12 },
+  photos: { min: 1, max: MAX_PHOTOS_PER_PAGE },
   music: { min: 1, max: 1 },
   gif: { min: 1, max: 1 },
   decoration: { min: 0, max: 0 },
@@ -113,16 +116,24 @@ export interface MemoryInput {
   tags: string[];
   visibility: MemoryVisibility;
   kind: MemoryKind;
-  /** Usuarios que pueden verlo cuando visibility = "selected" */
+  /** Amigos que pueden verlo cuando visibility = "selected" */
   viewerIds: string[];
   pages: {
     blocks: (Omit<MemoryBlock, "media"> & { media: { id: string; caption?: string }[] })[];
   }[];
 }
 
-/** Usuario del libro (tabla profiles). */
+/** Usuario del libro (tabla profiles). Los demás solo ven su apodo, nunca su correo. */
 export interface Profile {
   id: string;
-  email: string;
   displayName: string;
+}
+
+/** Relación del usuario actual con otro usuario. */
+export type FriendStatus = "none" | "friends" | "sent" | "received";
+
+export interface DirectoryEntry extends Profile {
+  status: FriendStatus;
+  /** Id de la solicitud (para aceptar o rechazar las recibidas) */
+  requestId?: string;
 }

@@ -111,8 +111,25 @@
   }
 
   .features {
-    grid-template-columns: 1fr;
-    max-width: 320px;
-    margin: 0 auto;
+    gap: 24px;
+  }
+}
+
+/* Celular: las polaroids en fila deslizable, sin ocupar toda la pantalla */
+@media (max-width: 600px) {
+  .features {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 72%;
+    gap: 18px;
+    margin: 0 -16px;
+    padding: 12px 16px 18px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .feature {
+    scroll-snap-align: center;
   }
 }

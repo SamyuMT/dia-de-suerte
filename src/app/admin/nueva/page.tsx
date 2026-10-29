@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getMyMedia } from "@/lib/media";
-import { getOtherProfiles } from "@/lib/profiles";
+import { getFriends } from "@/lib/profiles";
 import { KIND_INFO, MEMORY_KINDS, type MemoryKind } from "@/types/memory";
 import MemoryEditor from "../editor/MemoryEditor";
 import styles from "../page.module.css";
@@ -48,7 +48,7 @@ export default async function NewMemoryPage({
     );
   }
 
-  const [profiles, library] = await Promise.all([getOtherProfiles(), getMyMedia()]);
+  const [profiles, library] = await Promise.all([getFriends(), getMyMedia()]);
 
   return (
     <div className={`container ${styles.wrap}`}>

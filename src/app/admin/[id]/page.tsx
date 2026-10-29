@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getMyMedia } from "@/lib/media";
 import { getMyMemoryById } from "@/lib/memories";
-import { getOtherProfiles } from "@/lib/profiles";
+import { getFriends } from "@/lib/profiles";
 import MemoryEditor from "../editor/MemoryEditor";
 import styles from "../page.module.css";
 
@@ -21,7 +21,7 @@ export default async function EditMemoryPage({ params }: { params: Promise<{ id:
   // Solo encuentra recuerdos del usuario actual: los de otros dan 404.
   const found = UUID.test(id) ? await getMyMemoryById(id) : undefined;
   if (!found) notFound();
-  const [profiles, library] = await Promise.all([getOtherProfiles(), getMyMedia()]);
+  const [profiles, library] = await Promise.all([getFriends(), getMyMedia()]);
 
   return (
     <div className={`container ${styles.wrap}`}>

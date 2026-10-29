@@ -33,21 +33,25 @@ src/
 │  ├─ recuerdos/[slug]/        Un recuerdo abierto como libro (BookView)
 │  ├─ login/                   page, LoginForm (client), actions.ts (login / logout)
 │  ├─ recuperar/               Recuperar contraseña con código OTP al correo (2 pasos)
-│  ├─ cuenta/                  Mi cuenta: nombre visible, cambiar contraseña, cerrar sesión
+│  ├─ cuenta/                  Mi cuenta: apodo, cambiar contraseña, cerrar sesión
+│  ├─ amigos/                  Solicitudes recibidas/enviadas, mis amigos, buscar por apodo (FriendButton)
 │  ├─ admin/                   CMS: listado (page), nueva/ (elegir tipo → editor), [id]/ (editar),
 │  │  │                        DeleteButton, actions.ts (saveMemoryAction, removeMemory, registerMediaAction)
 │  │  └─ editor/               MemoryEditor (vista previa + páginas), BlockEditor, MediaPicker,
 │  │                           upload.ts (sube al bucket desde el navegador), templates.ts
 │  └─ not-found.tsx
 ├─ components/
-│  ├─ book/                    BookView (dobles páginas, pasar página), BookPage, TextBlock, PhotosBlock,
-│  │                           MusicDisc (vinilo + <audio>), GifBlock. Se usan en lectura y en la vista previa.
+│  ├─ book/                    BookView (doble página desde 700 px; en celular una página con swipe),
+│  │                           BookPage, TextBlock, PhotosBlock, MusicDisc (vinilo + <audio>), GifBlock.
+│  │                           Se usan en lectura y en la vista previa del editor.
+│  ├─ MobileMenu               Menú lateral (☰) en ≤ 900 px; SiteHeader muestra la barra normal en escritorio
 │  └─ BookCover, Polaroid, MemoryCard, Carnation, Clover, SiteHeader, SiteFooter
 ├─ lib/
 │  ├─ memories.ts              Recuerdos: getMemories, getMyMemories, getMemoryBySlug, getMyMemoryById,
 │  │                           saveMemory (rpc save_memory), deleteMemory
-│  ├─ media.ts                 Archivos: getMyMedia, registerMedia, signMedia (URLs firmadas 1 h)
-│  ├─ profiles.ts              getOtherProfiles, getMyProfile, updateMyDisplayName
+│  ├─ media.ts                 Archivos: getMyMedia, registerMedia, deleteMedia, signMedia (URLs firmadas 1 h)
+│  ├─ profiles.ts              Apodos y amigos: getMyProfile, updateMyNickname, getDirectory, getFriends,
+│  │                           getPendingRequestCount, send/respond/removeFriendship (rpc)
 │  ├─ passwords.ts             Reglas y mensajes de contraseña
 │  ├─ auth.ts                  getCurrentUser(), requireUser(), safeNextPath()
 │  ├─ supabase/                env.ts, server.ts, browser.ts (subidas), proxy.ts (updateSession)
@@ -62,9 +66,11 @@ supabase/
 
 - **Privado por defecto.** `src/lib/supabase/proxy.ts` deja pasar sin sesión `PUBLIC_PATHS` (`/login`, `/recuperar`) y `OPEN_PREFIXES` (`/recuerdos/`); todo lo demás redirige a `/login?next=...`. En `/recuerdos/[slug]` decide el RLS: si es `public` se ve sin sesión; si no, redirige al login.
 - Email + contraseña con Supabase Auth. **Sin registro**: los usuarios se crean en el dashboard (Authentication → Users → Add user → *Auto Confirm User*).
-- **Recuperar contraseña**: `resetPasswordForEmail` → el usuario escribe el código de 6 dígitos → `verifyOtp({ type: "recovery" })` → `updateUser({ password })`. Requiere que la plantilla **Reset password** de Supabase incluya `{{ .Token }}`. El SMTP por defecto de Supabase solo envía a miembros del equipo del proyecto y con límite muy bajo: para otros usuarios hace falta **SMTP propio** (p. ej. Resend) en Authentication → SMTP.
+- **Recuperar contraseña**: `resetPasswordForEmail` → el usuario escribe el código de 6 dígitos → `verifyOtp({ type: "recovery" })` → `updateUser({ password })`. La plantilla **Reset password** incluye `{{ .Token }}`. Correo enviado con **SMTP de Gmail** (jemycraft12@gmail.com, contraseña de aplicación), configurado en Supabase → Authentication → SMTP. Site URL: `https://dia-de-suerte.vercel.app`.
 - Cambiar contraseña en `/cuenta` pide la actual (se verifica con `signInWithPassword`).
-- Header: con sesión muestra Inicio · Recuerdos · **Crear** (→ `/admin`) · Mi cuenta · Salir.
+- Header: con sesión muestra Inicio · Recuerdos · **Crear** (→ `/admin`) · Amigos (con número de solicitudes) · Mi cuenta · Salir. En ≤ 900 px pasa al menú lateral.
+- **Apodo** (`profiles.display_name`): único (sin importar mayúsculas), 3–30 caracteres `[A-Za-z0-9_.-]` + tildes/ñ. Es lo único que ven los demás: la columna `email` de profiles no es legible por los usuarios.
+- **Amigos** (`friendships`): solicitud `pending` → la otra persona acepta (`accepted`) o rechaza (se borra). Si ambos se envían solicitud, queda aceptada. Solo se escribe con `send_friend_request`, `respond_friend_request`, `remove_friendship`. Dejar de ser amigos quita también los `memory_viewers` entre ambos.
 - Las páginas de `/admin`, `/cuenta` y las server actions llaman a `requireUser()` (no confiar solo en el proxy).
 
 ## Base de datos
@@ -75,8 +81,9 @@ memories ─┬─ memory_pages (position) ── memory_blocks (position, type)
 ```
 
 - `memories`: `slug` (único, kebab-case), `title`, `date`, `excerpt`, `tags`, `visibility`, `kind` (`pensamiento|album|disco|gif`, tipo principal/plantilla), `created_by`.
-- `visibility`: `draft` (solo el autor) · `members` (todos con sesión) · `selected` (autor + `memory_viewers`) · `public` (cualquiera, también `anon`).
-- `memory_blocks.type`: `text` (heading, body, caption) · `photos` (1–12 imágenes/gifs) · `music` (track_title obligatorio, 1 audio) · `gif` (1 gif) · `decoration` (`'clavel'` + caption). `body` separa párrafos con línea en blanco.
+- `visibility`: `draft` (solo el autor) · `friends` (todos los amigos del autor) · `selected` (autor + amigos en `memory_viewers`) · `public` (cualquiera, también `anon`). Antes `friends` se llamaba `members`.
+- **Máximo 4 fotos por página** (`MAX_PHOTOS_PER_PAGE`, también en `save_memory`).
+- `memory_blocks.type`: `text` (heading, body, caption) · `photos` (1–4 imágenes/gifs) · `music` (track_title obligatorio, 1 audio) · `gif` (1 gif) · `decoration` (`'clavel'` + caption). `body` separa párrafos con línea en blanco.
 - `media`: archivos del usuario en Storage, bucket privado **`media`**, ruta `<user_id>/<uuid>.<ext>`, máx. 50 MB, tipos de imagen/gif/audio. `source` `upload|google_photos` (+ `external_id`), preparado para importar de Google Fotos.
 - **Escritura**: páginas, bloques y `block_media` NO tienen permisos de insert/update para los usuarios; solo se escriben con **`save_memory(p_memory_id, p_memory, p_pages, p_viewer_ids)`** (security definer): comprueba autoría, valida tipos/cantidades de archivos, reemplaza páginas y visores en una transacción. `memories` se borra directo (RLS: solo el autor).
 - **Lectura**: RLS con helpers `private.can_view_memory()`, `private.can_view_media()`, `private.can_view_media_object()` (security definer). Las imágenes/audio se sirven con **URLs firmadas** (1 h) creadas en el servidor con la sesión del visitante.
@@ -99,14 +106,15 @@ memories ─┬─ memory_pages (position) ── memory_blocks (position, type)
 - Primer recuerdo: **"Un buen día para ti, solecito"** (27-10-2026), texto en la página 1 y clavel en la página 2.
 - Login, recuperar contraseña con código, Mi cuenta (nombre, contraseña, salir). Sitio privado por defecto.
 - CMS en `/admin`: elegir tipo (pensamiento, álbum, disco, GIF), editor con vista previa del libro, varias páginas, mover bloques entre páginas, subir archivos o elegirlos de la biblioteca, visibilidad y personas elegidas, borrar.
-- Migraciones: `20261028120000_create_memories`, `20261028150000_memory_visibility_and_ownership`, `20261029120000_pages_blocks_media` (páginas, bloques, media, Storage, save_memory).
+- Migraciones: `20261028120000_create_memories`, `20261028150000_memory_visibility_and_ownership`, `20261029120000_pages_blocks_media` (páginas, bloques, media, Storage, save_memory), `20261030120000_friends_nicknames_photo_limit` (apodos únicos, correos privados, amistades, members → friends, 4 fotos por página).
+- Amigos con solicitudes, apodo en Mi cuenta, borrar archivos de la biblioteca.
+- Diseño de celular y tablet: menú lateral, libro de una página con swipe en celular, polaroids de la portada en fila deslizable, formularios con campos de 16 px y botones táctiles.
 - Deploy en Vercel conectado a GitHub.
 
 ## Pendiente / próximos pasos
 
 - **Google Fotos**: con el Picker API (la Library API ya no permite leer álbumes del usuario desde 2025). Requiere proyecto en Google Cloud + OAuth (scope `photospicker.mediaitems.readonly`); las fotos elegidas se copian a Storage como `media` con `source = 'google_photos'`.
-- SMTP propio en Supabase para que los correos de recuperación lleguen a todos.
-- Borrar archivos de la biblioteca que no se usen; botón "copiar enlace" para recuerdos públicos.
+- Botón "copiar enlace" para recuerdos públicos.
 - Activar "Deploy to production" en la integración de GitHub de Supabase y "Leaked password protection" en Auth.
 - No hay tests todavía.
 

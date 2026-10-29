@@ -77,18 +77,33 @@
   cursor: pointer;
 }
 
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  padding: 0 5px;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  color: var(--leather-dark);
+  background: var(--letter-4);
+  border-radius: 10px;
+  vertical-align: 2px;
+}
+
+/* En celular y tablet la navegación pasa al menú lateral (MobileMenu) */
+@media (max-width: 900px) {
+  .nav {
+    display: none;
+  }
+}
+
 @media (max-width: 520px) {
   .inner {
-    flex-wrap: wrap;
-    justify-content: center;
-    padding-top: 8px;
-    padding-bottom: 8px;
+    min-height: 58px;
   }
   .brand {
-    font-size: 1.1rem;
-  }
-  .nav {
-    gap: 14px;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
   }
 }

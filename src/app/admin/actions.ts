@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { registerMedia, type NewMedia } from "@/lib/media";
+import { deleteMedia, registerMedia, type NewMedia } from "@/lib/media";
 import { MemoryWriteError, deleteMemory, saveMemory } from "@/lib/memories";
 import {
   BLOCK_MEDIA_LIMITS,
   BLOCK_TYPES,
+  MAX_PHOTOS_PER_PAGE,
   MEMORY_KINDS,
   MEMORY_VISIBILITIES,
   type BlockType,
@@ -84,12 +85,18 @@ function clean(raw: MemoryInput): { input?: MemoryInput; error?: string } {
       });
     }
     if (blocks.length > 50) return { error: `La página ${pageIndex + 1} tiene demasiados bloques.` };
+    const photos = blocks.filter((b) => b.type === "photos").reduce((n, b) => n + b.media.length, 0);
+    if (photos > MAX_PHOTOS_PER_PAGE) {
+      return {
+        error: `La página ${pageIndex + 1} tiene más de ${MAX_PHOTOS_PER_PAGE} fotos. Pasa algunas a otra página.`,
+      };
+    }
     pages.push({ blocks });
   }
 
   const viewerIds = (raw.viewerIds ?? []).filter((id) => typeof id === "string");
   if (raw.visibility === "selected" && viewerIds.length === 0) {
-    return { error: "Elige al menos una persona que pueda ver el recuerdo." };
+    return { error: "Elige al menos un amigo que pueda ver el recuerdo." };
   }
 
   const input: MemoryInput = {
@@ -131,6 +138,17 @@ export async function removeMemory(id: string) {
   await deleteMemory(id);
   revalidatePath("/", "layout");
   redirect("/admin");
+}
+
+/** Borra un archivo de la biblioteca del usuario (si no está en un recuerdo guardado). */
+export async function deleteMediaAction(id: string): Promise<{ error?: string }> {
+  await requireUser();
+  try {
+    await deleteMedia(id);
+    return {};
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "No se pudo borrar el archivo." };
+  }
 }
 
 /** Registra un archivo que el navegador ya subió a Storage (carpeta <user_id>/). */

@@ -1,0 +1,214 @@
+/* Solo en celular y tablet; en escritorio se usa la barra normal */
+.toggle {
+  position: relative;
+  display: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--paper-light);
+  background: rgba(247, 236, 212, 0.08);
+  border: 1.5px solid rgba(247, 236, 212, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.bars,
+.bars::before,
+.bars::after {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+
+.bars {
+  position: relative;
+}
+
+.bars::before,
+.bars::after {
+  content: "";
+  position: absolute;
+  left: 0;
+}
+
+.bars::before {
+  top: -6px;
+}
+
+.bars::after {
+  top: 6px;
+}
+
+.dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  background: var(--letter-4);
+  border: 2px solid var(--leather);
+  border-radius: 50%;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(30, 18, 10, 0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Panel de cuero que entra desde la derecha */
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  width: min(300px, 86vw);
+  padding: 18px 18px 24px;
+  color: var(--paper-light);
+  background-color: var(--leather);
+  background-image: var(--noise), linear-gradient(160deg, #5a3824, var(--leather-dark));
+  border-left: 6px solid var(--cloth);
+  box-shadow: -12px 0 28px rgba(30, 18, 10, 0.45);
+  transform: translateX(105%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+
+.open {
+  transform: translateX(0);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+
+.close {
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+  color: var(--paper-light);
+  background: none;
+  border: 1.5px solid rgba(247, 236, 212, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.who {
+  margin: 18px 0 4px;
+  font-family: var(--font-hand);
+  font-size: 1.4rem;
+  color: var(--leather-line);
+}
+
+.links {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 6px 14px;
+  font-family: var(--font-hand);
+  font-size: 1.55rem;
+  text-decoration: none;
+  border-radius: 4px;
+  border-bottom: 1px dashed rgba(201, 162, 116, 0.35);
+}
+
+.link:hover,
+.active {
+  background: rgba(247, 236, 212, 0.1);
+}
+
+.active {
+  box-shadow: inset 4px 0 0 var(--letter-4);
+}
+
+.highlight {
+  color: var(--paper-light);
+  background-color: var(--cloth);
+  background-image: var(--noise);
+  border-bottom: 0;
+}
+
+.highlight:hover,
+.highlight.active {
+  background-color: var(--cloth-dark);
+}
+
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-family: var(--font-title);
+  font-size: 0.8rem;
+  color: var(--leather-dark);
+  background: var(--letter-4);
+  border-radius: 12px;
+}
+
+.logoutRow {
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.logout {
+  width: 100%;
+  min-height: 46px;
+  font: inherit;
+  color: var(--paper-light);
+  background: transparent;
+  border: 1.5px solid rgba(247, 236, 212, 0.45);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.logout:hover {
+  background: rgba(247, 236, 212, 0.1);
+}
+
+@media (max-width: 900px) {
+  .toggle {
+    display: grid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .overlay {
+    transition: none;
+  }
+}

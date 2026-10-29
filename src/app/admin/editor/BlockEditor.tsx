@@ -19,9 +19,14 @@ interface BlockEditorProps {
   onMoveDown?: () => void;
   onToPrevPage?: () => void;
   onToNextPage: () => void;
+  /** Fotos que todavía caben en la página, sin contar las de este bloque */
+  pageRoom: number;
   library: MediaItem[];
   userId: string;
+  /** Archivos usados en todo el recuerdo */
+  usedIds: Set<string>;
   onLibraryAdd: (items: MediaItem[]) => void;
+  onLibraryDelete: (id: string) => void;
 }
 
 function Field({
@@ -69,26 +74,32 @@ export default function BlockEditor({
   onMoveDown,
   onToPrevPage,
   onToNextPage,
+  pageRoom,
   library,
   userId,
+  usedIds,
   onLibraryAdd,
+  onLibraryDelete,
 }: BlockEditorProps) {
   const kinds = MEDIA_KINDS[block.type];
   const limits = BLOCK_MEDIA_LIMITS[block.type];
   const [picking, setPicking] = useState(Boolean(kinds) && block.media.length === 0);
   const info = BLOCK_INFO[block.type];
   const set = (patch: Partial<MemoryBlock>) => onChange({ ...block, ...patch });
+  // Canción o GIF: siempre cabe uno (reemplaza al anterior). Fotos: límite del bloque y de la página.
+  const room =
+    limits.max === 1 ? 1 : Math.min(limits.max - block.media.length, pageRoom - block.media.length);
 
   const addMedia = (items: MediaItem[]) => {
-    const room = limits.max - block.media.length;
     const added = items.filter((m) => !block.media.some((bm) => bm.media.id === m.id));
     if (limits.max === 1) {
-      // Canción o GIF: el nuevo reemplaza al anterior.
       if (added[0]) set({ media: [{ media: added[0] }] });
-    } else {
-      set({ media: [...block.media, ...added.slice(0, room).map((media) => ({ media }))] });
+      setPicking(false);
+      return;
     }
-    if (limits.max === 1 || block.media.length + added.length >= limits.max) setPicking(false);
+    const kept = added.slice(0, Math.max(room, 0));
+    set({ media: [...block.media, ...kept.map((media) => ({ media }))] });
+    if (kept.length >= room) setPicking(false);
   };
 
   const moveMedia = (from: number, to: number) => {
@@ -143,7 +154,7 @@ export default function BlockEditor({
         <div className={styles.media}>
           <span className={styles.label}>
             {block.type === "music" ? "Archivo de la canción *" : block.type === "gif" ? "GIF *" : "Fotos *"}
-            {limits.max > 1 && ` (${block.media.length}/${limits.max})`}
+            {limits.max > 1 && ` (${block.media.length}/${Math.min(limits.max, pageRoom)} en esta página)`}
           </span>
 
           {block.media.length > 0 && (
@@ -187,9 +198,10 @@ export default function BlockEditor({
                       type="button"
                       className={styles.remove}
                       onClick={() => set({ media: block.media.filter((_, j) => j !== i) })}
-                      title="Quitar"
+                      title="Quitar de este recuerdo"
+                      aria-label="Quitar de este recuerdo"
                     >
-                      ✕
+                      ✕ Quitar
                     </button>
                   </div>
                 </li>
@@ -200,19 +212,20 @@ export default function BlockEditor({
           {picking ? (
             <MediaPicker
               kinds={kinds}
-              multiple={limits.max > 1}
+              room={room}
               library={library}
               userId={userId}
-              selectedIds={block.media.map((bm) => bm.media.id)}
+              usedIds={usedIds}
               onUploaded={(items) => {
                 onLibraryAdd(items);
                 addMedia(items);
               }}
               onPick={(item) => addMedia([item])}
+              onDeleted={onLibraryDelete}
               onClose={() => setPicking(false)}
             />
           ) : (
-            (block.media.length < limits.max || limits.max === 1) && (
+            (room > 0 || limits.max === 1) && (
               <button type="button" className={styles.add} onClick={() => setPicking(true)}>
                 {block.media.length === 0
                   ? "+ Agregar"

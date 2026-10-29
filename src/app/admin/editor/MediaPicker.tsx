@@ -2,45 +2,51 @@
 
 import { useRef, useState } from "react";
 import type { MediaItem, MediaKind } from "@/types/memory";
+import { deleteMediaAction } from "../actions";
 import { ACCEPT, uploadMedia } from "./upload";
 import styles from "./MediaPicker.module.css";
 
 interface MediaPickerProps {
   /** Clases de archivo que acepta el bloque */
   kinds: MediaKind[];
-  /** Puede elegir varios (álbum) o solo uno (canción, GIF) */
-  multiple: boolean;
+  /** Cuántos archivos más se pueden agregar ahora (0 = ninguno) */
+  room: number;
   /** Archivos del usuario ya subidos */
   library: MediaItem[];
   userId: string;
-  /** Ids ya puestos en el bloque */
-  selectedIds: string[];
+  /** Ids usados en este recuerdo (no se pueden borrar mientras estén puestos) */
+  usedIds: Set<string>;
   onUploaded: (items: MediaItem[]) => void;
   onPick: (item: MediaItem) => void;
+  onDeleted: (id: string) => void;
   onClose: () => void;
 }
 
-/** Subir archivos nuevos o elegir de los que ya subiste. */
+/** Subir archivos nuevos, elegir de los que ya subiste o borrarlos de tu biblioteca. */
 export default function MediaPicker({
   kinds,
-  multiple,
+  room,
   library,
   userId,
-  selectedIds,
+  usedIds,
   onUploaded,
   onPick,
+  onDeleted,
   onClose,
 }: MediaPickerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const items = library.filter((m) => kinds.includes(m.kind));
   const isAudio = kinds.includes("audio");
+  const full = room <= 0;
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setError(null);
-    const list = multiple ? [...files] : [files[0]];
+    const list = [...files].slice(0, Math.max(room, 1));
+    if (files.length > list.length) setError(`Solo caben ${room} más en esta página; se subieron las primeras.`);
     setUploading(list.length);
     const done: MediaItem[] = [];
     for (const file of list) {
@@ -55,17 +61,28 @@ export default function MediaPicker({
     if (inputRef.current) inputRef.current.value = "";
   };
 
+  const remove = async (item: MediaItem) => {
+    const name = item.originalName ?? (isAudio ? "esta canción" : "esta foto");
+    if (!confirm(`¿Borrar "${name}" de tu biblioteca? No se puede deshacer.`)) return;
+    setError(null);
+    setDeleting(item.id);
+    const result = await deleteMediaAction(item.id);
+    setDeleting(null);
+    if (result.error) setError(result.error);
+    else onDeleted(item.id);
+  };
+
   return (
     <div className={styles.picker}>
       <div className={styles.top}>
-        <label className={styles.upload}>
+        <label className={`${styles.upload} ${full ? styles.disabled : ""}`}>
           <input
             ref={inputRef}
             type="file"
             accept={kinds.map((k) => ACCEPT[k]).join(",")}
-            multiple={multiple}
+            multiple={room > 1}
             onChange={(e) => handleFiles(e.target.files)}
-            disabled={uploading > 0}
+            disabled={uploading > 0 || full}
           />
           {uploading > 0 ? `Subiendo ${uploading}…` : isAudio ? "⬆ Subir canción" : "⬆ Subir desde tu equipo"}
         </label>
@@ -73,6 +90,8 @@ export default function MediaPicker({
           Listo
         </button>
       </div>
+
+      {full && <p className={styles.hint}>Esta página ya tiene el máximo de fotos. Agrega más en otra página.</p>}
 
       {error && (
         <p className={styles.error} role="alert">
@@ -85,23 +104,36 @@ export default function MediaPicker({
           <p className={styles.hint}>O elige de lo que ya subiste:</p>
           <div className={isAudio ? styles.tracks : styles.grid}>
             {items.map((item) => {
-              const used = selectedIds.includes(item.id);
+              const used = usedIds.has(item.id);
               return (
-                <button
-                  key={item.id}
-                  type="button"
-                  className={`${styles.item} ${used ? styles.used : ""}`}
-                  onClick={() => onPick(item)}
-                  disabled={used}
-                  title={item.originalName}
-                >
-                  {item.kind === "audio" ? (
-                    <span className={styles.track}>💿 {item.originalName ?? "Canción"}</span>
-                  ) : (
-                    <img src={item.url} alt={item.originalName ?? ""} loading="lazy" />
+                <div key={item.id} className={`${styles.item} ${used ? styles.used : ""}`}>
+                  <button
+                    type="button"
+                    className={styles.pick}
+                    onClick={() => onPick(item)}
+                    disabled={used || full}
+                    title={item.originalName}
+                  >
+                    {item.kind === "audio" ? (
+                      <span className={styles.track}>💿 {item.originalName ?? "Canción"}</span>
+                    ) : (
+                      <img src={item.url} alt={item.originalName ?? ""} loading="lazy" />
+                    )}
+                    {used && <span className={styles.check}>✓</span>}
+                  </button>
+                  {!used && (
+                    <button
+                      type="button"
+                      className={styles.delete}
+                      onClick={() => remove(item)}
+                      disabled={deleting === item.id}
+                      aria-label={`Borrar ${item.originalName ?? "archivo"} de la biblioteca`}
+                      title="Borrar de tu biblioteca"
+                    >
+                      {deleting === item.id ? "…" : "🗑"}
+                    </button>
                   )}
-                  {used && <span className={styles.check}>✓</span>}
-                </button>
+                </div>
               );
             })}
           </div>

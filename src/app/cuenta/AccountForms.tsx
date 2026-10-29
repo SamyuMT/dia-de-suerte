@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { MIN_PASSWORD_LENGTH } from "@/lib/passwords";
-import { changePassword, saveName, type AccountState } from "./actions";
+import { changePassword, saveNickname, type AccountState } from "./actions";
 import styles from "./page.module.css";
 
 const initialState: AccountState = { error: null, done: null, attempt: 0 };
@@ -19,18 +19,30 @@ function Message({ state }: { state: AccountState }) {
   return null;
 }
 
-export function NameForm({ displayName }: { displayName: string }) {
-  const [state, action, pending] = useActionState(saveName, initialState);
+export function NicknameForm({ nickname }: { nickname: string }) {
+  const [state, action, pending] = useActionState(saveNickname, initialState);
   return (
     <form action={action} className={styles.form}>
       <label className={styles.field}>
-        <span className={styles.label}>Tu nombre en el libro</span>
-        <input className={styles.input} name="displayName" defaultValue={displayName} maxLength={60} required />
-        <span className={styles.hint}>Es como te ven los demás al compartir recuerdos.</span>
+        <span className={styles.label}>Tu apodo</span>
+        <input
+          className={styles.input}
+          name="nickname"
+          defaultValue={nickname}
+          minLength={3}
+          maxLength={30}
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          required
+        />
+        <span className={styles.hint}>
+          Es lo único que ven los demás (tu correo es privado). Sin espacios; puedes usar punto y guiones.
+        </span>
       </label>
       <Message state={state} />
       <button type="submit" className={styles.button} disabled={pending}>
-        {pending ? "Guardando..." : "Guardar nombre"}
+        {pending ? "Guardando..." : "Guardar apodo"}
       </button>
     </form>
   );

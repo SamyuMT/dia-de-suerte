@@ -3,25 +3,30 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { checkNewPassword, passwordUpdateError } from "@/lib/passwords";
-import { updateMyDisplayName } from "@/lib/profiles";
+import { NICKNAME_PATTERN, NicknameError, updateMyNickname } from "@/lib/profiles";
 import { createClient } from "@/lib/supabase/server";
 
 export type AccountState = { error: string | null; done: string | null; attempt: number };
 
-export async function saveName(prev: AccountState, formData: FormData): Promise<AccountState> {
+export async function saveNickname(prev: AccountState, formData: FormData): Promise<AccountState> {
   await requireUser();
-  const name = String(formData.get("displayName") ?? "").trim();
+  const nickname = String(formData.get("nickname") ?? "").trim();
   const next = { error: null, done: null, attempt: prev.attempt + 1 };
-  if (!name) return { ...next, error: "Escribe cómo quieres que te vean." };
-  if (name.length > 60) return { ...next, error: "El nombre puede tener hasta 60 caracteres." };
+  if (!NICKNAME_PATTERN.test(nickname)) {
+    return {
+      ...next,
+      error: "El apodo debe tener de 3 a 30 caracteres: letras, números, punto, guion o guion bajo (sin espacios).",
+    };
+  }
 
   try {
-    await updateMyDisplayName(name);
+    await updateMyNickname(nickname);
   } catch (e) {
-    return { ...next, error: e instanceof Error ? e.message : "No se pudo guardar tu nombre." };
+    if (e instanceof NicknameError) return { ...next, error: e.message };
+    throw e;
   }
   revalidatePath("/", "layout");
-  return { ...next, done: "Nombre guardado." };
+  return { ...next, done: "Apodo guardado." };
 }
 
 export async function changePassword(prev: AccountState, formData: FormData): Promise<AccountState> {

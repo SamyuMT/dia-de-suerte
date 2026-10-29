@@ -3,7 +3,7 @@ import Link from "next/link";
 import { logout } from "@/app/login/actions";
 import { requireUser } from "@/lib/auth";
 import { getMyProfile } from "@/lib/profiles";
-import { NameForm, PasswordForm } from "./AccountForms";
+import { NicknameForm, PasswordForm } from "./AccountForms";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {
@@ -28,8 +28,11 @@ export default async function AccountPage() {
 
         <div className={styles.sections}>
           <div className={styles.section}>
-            <h2 className={styles.sectionTitle}>Nombre</h2>
-            <NameForm displayName={profile?.displayName ?? ""} />
+            <h2 className={styles.sectionTitle}>Apodo</h2>
+            <NicknameForm nickname={profile?.displayName ?? ""} />
+            <Link href="/amigos" className={styles.back}>
+              Ver mis amigos →
+            </Link>
           </div>
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Contraseña</h2>

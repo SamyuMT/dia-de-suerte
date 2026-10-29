@@ -17,7 +17,7 @@
 
 .upload {
   position: relative;
-  padding: 6px 14px;
+  padding: 8px 16px;
   font-family: var(--font-hand);
   font-size: 1.25rem;
   color: var(--paper-light);
@@ -38,8 +38,13 @@
   cursor: pointer;
 }
 
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .close {
-  padding: 4px 12px;
+  padding: 6px 14px;
   font-family: var(--font-hand);
   font-size: 1.2rem;
   color: var(--ink);
@@ -63,52 +68,63 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
   gap: 8px;
-  max-height: 260px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
 .tracks {
   display: grid;
   gap: 6px;
-  max-height: 220px;
+  max-height: 240px;
   overflow-y: auto;
 }
 
 .item {
   position: relative;
-  padding: 0;
   overflow: hidden;
   background: #e9dcc0;
   border: 1.5px solid transparent;
   border-radius: 3px;
-  cursor: pointer;
 }
 
 .grid .item {
   aspect-ratio: 1;
 }
 
-.item img {
+.item:hover:not(.used) {
+  border-color: var(--cloth-dark);
+}
+
+.pick {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.pick:disabled {
+  cursor: default;
+}
+
+.pick img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.item:hover:not(:disabled) {
-  border-color: var(--cloth-dark);
-}
-
 .used {
   opacity: 0.55;
-  cursor: default;
 }
 
 .track {
   display: block;
-  padding: 8px 10px;
+  padding: 10px 44px 10px 10px;
   font: inherit;
   font-size: 0.9rem;
   text-align: left;
@@ -124,4 +140,26 @@
   font-weight: 700;
   color: var(--paper-light);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Botón de borrar: siempre visible (en táctil no hay hover) */
+.delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  font-size: 0.95rem;
+  background: rgba(251, 246, 234, 0.92);
+  border: 1px solid var(--paper-edge);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.delete:hover {
+  border-color: var(--cloth-dark);
 }
