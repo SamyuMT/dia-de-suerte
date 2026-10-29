@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabaseEnv } from "./env";
 
 /** Rutas abiertas sin sesión. Todo lo demás es privado. */
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/recuperar"];
 
 /**
  * Rutas que se dejan pasar sin sesión porque la página decide:

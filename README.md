@@ -28,9 +28,15 @@ npm start       # servir el build
 
 - **Privado por defecto**: sin sesión, todo redirige a `/login` (`src/proxy.ts`), salvo las páginas marcadas como públicas.
 - Al entrar se ve el libro (`/`). En el menú, **Crear** abre el panel `/admin` con tus páginas.
-- Cada página tiene una visibilidad: **borrador** (solo tú), **miembros** (todos con cuenta),
-  **personas elegidas** (solo quienes marques) o **pública con enlace** (cualquiera con el link).
-- Solo quien escribió una página puede editarla o borrarla. Lo controla el RLS de Supabase.
+- Al crear eliges el tipo de recuerdo: **pensamiento**, **álbum de fotos**, **disco** (canción que se reproduce)
+  o **GIF**. Cada recuerdo tiene una o varias páginas y en cada página puedes mezclar texto, fotos, canciones,
+  GIFs y el clavel. El editor muestra la vista previa del libro mientras escribes.
+- Las fotos, GIFs y canciones se guardan en Supabase Storage (bucket privado `media`).
+- Cada recuerdo tiene una visibilidad: **borrador** (solo tú), **miembros** (todos con cuenta),
+  **personas elegidas** (solo quienes marques) o **público con enlace** (cualquiera con el link).
+- Solo quien escribió un recuerdo puede editarlo o borrarlo. Lo controla el RLS de Supabase.
+- ¿Olvidaste la contraseña? En `/recuperar` te llega un código al correo. En **Mi cuenta** cambias tu nombre
+  y tu contraseña, o cierras sesión.
 - Deploy: Vercel, conectado a GitHub (cada push a `main` publica).
 
 ## Estructura

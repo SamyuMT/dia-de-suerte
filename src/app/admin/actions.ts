@@ -3,22 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { MemoryWriteError, createMemory, deleteMemory, updateMemory } from "@/lib/memories";
+import { registerMedia, type NewMedia } from "@/lib/media";
+import { MemoryWriteError, deleteMemory, saveMemory } from "@/lib/memories";
 import {
-  MEMORY_DECORATIONS,
+  BLOCK_MEDIA_LIMITS,
+  BLOCK_TYPES,
+  MEMORY_KINDS,
   MEMORY_VISIBILITIES,
-  type MemoryDecoration,
+  type BlockType,
+  type MediaItem,
   type MemoryInput,
-  type MemoryVisibility,
 } from "@/types/memory";
-
-export type MemoryFormState = {
-  error: string | null;
-  /** Valores enviados, para no perderlos si hay un error */
-  values: Record<string, string>;
-  /** Cambia en cada envío para volver a montar el formulario con los valores */
-  attempt: number;
-};
 
 function slugify(text: string) {
   return text
@@ -26,93 +21,103 @@ function slugify(text: string) {
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80)
+    .replace(/-+$/g, "");
 }
 
-function excerptFrom(paragraph: string) {
-  return paragraph.length > 160 ? `${paragraph.slice(0, 157).trimEnd()}...` : paragraph;
+function excerptFrom(input: MemoryInput) {
+  const text = input.pages
+    .flatMap((p) => p.blocks)
+    .map((b) => b.body?.trim())
+    .find(Boolean);
+  if (!text) return "";
+  const flat = text.replace(/\s+/g, " ");
+  return flat.length > 160 ? `${flat.slice(0, 157).trimEnd()}...` : flat;
 }
 
-function optional(value: string) {
-  return value === "" ? undefined : value;
-}
+const text = (value: unknown, max: number) =>
+  typeof value === "string" && value.trim() ? value.trim().slice(0, max) : undefined;
 
-function parseForm(formData: FormData): { input?: MemoryInput; error?: string } {
-  const field = (name: string) => String(formData.get(name) ?? "").trim();
+/** Revisa y normaliza lo que manda el editor; la base vuelve a validar todo en save_memory(). */
+function clean(raw: MemoryInput): { input?: MemoryInput; error?: string } {
+  const title = text(raw.title, 200);
+  if (!title) return { error: "El recuerdo necesita un título." };
 
-  const title = field("title");
-  if (!title) return { error: "La página necesita un título." };
-
-  const slug = slugify(field("slug") || title);
+  const slug = slugify(raw.slug || title);
   if (!slug) return { error: "La dirección (slug) solo puede tener letras, números y guiones." };
 
-  const date = field("date");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "Elige una fecha válida." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.date ?? "")) return { error: "Elige una fecha válida." };
+  if (!MEMORY_VISIBILITIES.includes(raw.visibility)) return { error: "Elige quién puede ver el recuerdo." };
+  if (!MEMORY_KINDS.includes(raw.kind)) return { error: "Elige el tipo de recuerdo." };
+  if (!Array.isArray(raw.pages) || raw.pages.length === 0) return { error: "El recuerdo necesita al menos una página." };
+  if (raw.pages.length > 100) return { error: "Un recuerdo puede tener hasta 100 páginas." };
 
-  const content = field("content")
-    .split(/\r?\n\s*\r?\n/)
-    .map((p) => p.replace(/\s*\r?\n\s*/g, " ").trim())
-    .filter(Boolean);
-  if (content.length === 0) return { error: "Escribe al menos un párrafo." };
+  const pages: MemoryInput["pages"] = [];
+  for (const [pageIndex, page] of raw.pages.entries()) {
+    const blocks: MemoryInput["pages"][number]["blocks"] = [];
+    for (const block of page.blocks ?? []) {
+      if (!BLOCK_TYPES.includes(block.type as BlockType)) return { error: "Hay un bloque de un tipo desconocido." };
+      const where = `en la página ${pageIndex + 1}`;
+      const media = (block.media ?? [])
+        .filter((m) => typeof m?.id === "string")
+        .map((m) => ({ id: m.id, caption: text(m.caption, 300) }));
+      const limits = BLOCK_MEDIA_LIMITS[block.type];
 
-  const decorationValue = field("decoration");
-  const decoration = MEMORY_DECORATIONS.includes(decorationValue as MemoryDecoration)
-    ? (decorationValue as MemoryDecoration)
-    : undefined;
+      if (block.type === "text" && !text(block.body, 10000)) return { error: `Hay un texto vacío ${where}.` };
+      if (block.type === "music" && !text(block.trackTitle, 200)) return { error: `Ponle nombre a la canción ${where}.` };
+      if (media.length < limits.min) {
+        const what = { photos: "al menos una foto", music: "una canción", gif: "un GIF" }[block.type as string];
+        return { error: `Falta subir ${what ?? "un archivo"} ${where}.` };
+      }
+      if (media.length > limits.max) return { error: `Hay demasiados archivos en un bloque ${where}.` };
 
-  const visibilityValue = field("visibility");
-  const visibility = MEMORY_VISIBILITIES.includes(visibilityValue as MemoryVisibility)
-    ? (visibilityValue as MemoryVisibility)
-    : "draft";
-
-  const viewerIds = formData.getAll("viewers").map(String).filter(Boolean);
-  if (visibility === "selected" && viewerIds.length === 0) {
-    return { error: "Elige al menos una persona que pueda ver la página." };
+      blocks.push({
+        type: block.type,
+        heading: text(block.heading, 200),
+        body: text(block.body, 10000),
+        caption: text(block.caption, 300),
+        trackTitle: block.type === "music" ? text(block.trackTitle, 200) : undefined,
+        trackArtist: block.type === "music" ? text(block.trackArtist, 200) : undefined,
+        decoration: block.type === "decoration" ? "clavel" : undefined,
+        media,
+      });
+    }
+    if (blocks.length > 50) return { error: `La página ${pageIndex + 1} tiene demasiados bloques.` };
+    pages.push({ blocks });
   }
 
-  return {
-    input: {
-      slug,
-      title,
-      date,
-      excerpt: field("excerpt") || excerptFrom(content[0]),
-      content,
-      greeting: optional(field("greeting")),
-      signature: optional(field("signature")),
-      decoration,
-      decorationCaption: decoration ? optional(field("decorationCaption")) : undefined,
-      tags: field("tags")
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-      visibility,
-      viewerIds,
-    },
+  const viewerIds = (raw.viewerIds ?? []).filter((id) => typeof id === "string");
+  if (raw.visibility === "selected" && viewerIds.length === 0) {
+    return { error: "Elige al menos una persona que pueda ver el recuerdo." };
+  }
+
+  const input: MemoryInput = {
+    slug,
+    title,
+    date: raw.date,
+    excerpt: "",
+    tags: (raw.tags ?? []).map((t) => String(t).trim()).filter(Boolean).slice(0, 20),
+    visibility: raw.visibility,
+    kind: raw.kind,
+    viewerIds,
+    pages,
   };
+  input.excerpt = text(raw.excerpt, 300) ?? excerptFrom(input);
+  return { input };
 }
 
-/** Crea (id = null) o actualiza una página. */
-export async function saveMemory(
-  id: string | null,
-  prev: MemoryFormState,
-  formData: FormData,
-): Promise<MemoryFormState> {
+/** Crea (id = null) o actualiza un recuerdo. Si sale bien, vuelve al panel. */
+export async function saveMemoryAction(id: string | null, raw: MemoryInput): Promise<{ error: string }> {
   await requireUser();
 
-  const values = Object.fromEntries(
-    [...formData.entries()].filter(([, v]) => typeof v === "string") as [string, string][],
-  );
-  values.viewers = formData.getAll("viewers").map(String).join(",");
-  const fail = (error: string) => ({ error, values, attempt: prev.attempt + 1 });
-
-  const { input, error } = parseForm(formData);
-  if (!input) return fail(error ?? "Revisa los datos.");
+  const { input, error } = clean(raw);
+  if (!input) return { error: error ?? "Revisa los datos." };
 
   try {
-    if (id) await updateMemory(id, input);
-    else await createMemory(input);
+    await saveMemory(id, input);
   } catch (e) {
-    if (e instanceof MemoryWriteError) return fail(e.message);
+    if (e instanceof MemoryWriteError) return { error: e.message };
     throw e;
   }
 
@@ -122,8 +127,21 @@ export async function saveMemory(
 
 export async function removeMemory(id: string) {
   await requireUser();
-  // Si no es su página, el RLS no borra nada y deleteMemory lanza un error.
+  // Si no es su recuerdo, el RLS no borra nada y deleteMemory lanza un error.
   await deleteMemory(id);
   revalidatePath("/", "layout");
   redirect("/admin");
+}
+
+/** Registra un archivo que el navegador ya subió a Storage (carpeta <user_id>/). */
+export async function registerMediaAction(
+  input: NewMedia,
+): Promise<{ media: MediaItem; error?: never } | { error: string; media?: never }> {
+  const user = await requireUser();
+  if (!input.storagePath.startsWith(`${user.id}/`)) return { error: "Ese archivo no está en tu carpeta." };
+  try {
+    return { media: await registerMedia(input) };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "No se pudo registrar el archivo." };
+  }
 }

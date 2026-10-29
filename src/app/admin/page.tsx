@@ -3,7 +3,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
 import { getMyMemories } from "@/lib/memories";
-import { VISIBILITY_LABELS } from "@/types/memory";
+import { KIND_INFO, VISIBILITY_LABELS } from "@/types/memory";
 import DeleteButton from "./DeleteButton";
 import styles from "./page.module.css";
 
@@ -23,22 +23,24 @@ export default async function AdminPage() {
           <div>
             <h1 className={styles.title}>Panel del libro</h1>
             <p className={styles.note}>
-              Tus páginas, escribiendo como <strong>{user.email}</strong>
+              Tus recuerdos, escribiendo como <strong>{user.email}</strong>
             </p>
           </div>
           <Link href="/admin/nueva" className={styles.primary}>
-            + Nueva página
+            + Nuevo recuerdo
           </Link>
         </div>
 
         {memories.length === 0 ? (
-          <p className={styles.empty}>Todavía no has escrito ninguna página. ¡Escribe la primera!</p>
+          <p className={styles.empty}>Todavía no has guardado ningún recuerdo. ¡Escribe el primero!</p>
         ) : (
           <ul className={styles.list}>
             {memories.map((memory) => (
               <li key={memory.id} className={styles.item}>
                 <div className={styles.info}>
-                  <span className={styles.itemTitle}>{memory.title}</span>
+                  <span className={styles.itemTitle}>
+                    <span title={KIND_INFO[memory.kind].label}>{KIND_INFO[memory.kind].icon}</span> {memory.title}
+                  </span>
                   <span className={styles.meta}>
                     {formatDate(memory.date)}
                     <span className={`${styles.badge} ${styles[memory.visibility]}`}>

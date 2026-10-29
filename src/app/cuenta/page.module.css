@@ -1,0 +1,161 @@
+.wrap {
+  padding-top: 40px;
+  padding-bottom: 72px;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  text-decoration: none;
+  color: var(--ink-soft);
+}
+
+.back:hover {
+  color: var(--cloth-dark);
+}
+
+.card {
+  padding: 36px clamp(18px, 5vw, 44px);
+  background-color: var(--paper-light);
+  background-image: var(--noise),
+    radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(140, 95, 45, 0.3) 100%);
+  border-radius: 4px;
+  box-shadow: 0 14px 30px rgba(50, 28, 10, 0.3);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 2.6rem;
+  font-weight: 700;
+}
+
+.note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 32px;
+  margin-top: 28px;
+}
+
+.section {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 1.8rem;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+}
+
+.label {
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  line-height: 1.1;
+}
+
+.input {
+  width: 100%;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: rgba(255, 250, 238, 0.6);
+  border: 1.5px dashed var(--paper-edge);
+  border-radius: 3px;
+  outline: none;
+}
+
+.input:focus {
+  border-style: solid;
+  border-color: var(--cloth-dark);
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+}
+
+.error,
+.done {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+
+.error {
+  color: var(--cloth-dark);
+}
+
+.done {
+  color: #4f6b3e;
+}
+
+.button {
+  justify-self: start;
+  padding: 9px 18px;
+  font-family: var(--font-title);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--paper-light);
+  background-color: var(--cloth);
+  background-image: var(--noise);
+  border: 0;
+  border-radius: 4px;
+  box-shadow: 0 3px 0 var(--cloth-dark);
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: var(--cloth-dark);
+}
+
+.button:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.logoutRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1.5px dashed var(--paper-dark);
+}
+
+.logout {
+  padding: 8px 16px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--cloth-dark);
+  background: transparent;
+  border: 1.5px solid var(--cloth-dark);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.logout:hover {
+  color: var(--paper-light);
+  background: var(--cloth-dark);
+}

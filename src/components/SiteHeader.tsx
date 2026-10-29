@@ -22,6 +22,7 @@ export default async function SiteHeader() {
             <Link href="/admin" className={styles.create}>
               Crear
             </Link>
+            <Link href="/cuenta">Mi cuenta</Link>
             <form action={logout}>
               <button type="submit" className={styles.logout}>
                 Salir

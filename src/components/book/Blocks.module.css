@@ -1,0 +1,62 @@
+.text,
+.photos,
+.gif,
+.music {
+  display: grid;
+  gap: 12px;
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 1.9rem;
+  line-height: 1.15;
+}
+
+.paragraph {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.signature {
+  margin: 8px 0 0;
+  font-family: var(--font-hand);
+  font-size: 1.75rem;
+  line-height: 1.2;
+  text-align: right;
+  color: var(--cloth-dark);
+}
+
+/* Álbum */
+.photoGrid {
+  display: grid;
+  gap: 26px 20px;
+  padding: 10px 6px;
+}
+
+.one {
+  grid-template-columns: minmax(0, 300px);
+  justify-content: center;
+}
+
+.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.many {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gifFrame {
+  justify-self: center;
+  width: 100%;
+  max-width: 300px;
+  padding: 8px;
+}

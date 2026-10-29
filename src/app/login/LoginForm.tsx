@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { login, type LoginState } from "./actions";
 import styles from "./page.module.css";
@@ -45,6 +46,10 @@ export default function LoginForm({ next }: { next: string }) {
       <button type="submit" className={styles.button} disabled={pending}>
         {pending ? "Abriendo..." : "Abrir el libro"}
       </button>
+
+      <Link href="/recuperar" className={styles.link}>
+        ¿Olvidaste tu contraseña?
+      </Link>
     </form>
   );
 }
