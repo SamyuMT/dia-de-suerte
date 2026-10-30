@@ -37,6 +37,9 @@ npm start       # servir el build
 - **Amigos**: escribes el apodo exacto de alguien y, si existe, le envías una solicitud; cuando la acepta,
   pueden compartirse recuerdos. Nadie puede ver la lista de usuarios ni tu correo, solo tu apodo.
 - Solo quien escribió un recuerdo puede editarlo o borrarlo. Lo controla el RLS de Supabase.
+- **Pedir entrar**: en `/solicitar` cualquiera deja su apodo, correo y teléfono. No se crea la cuenta: el
+  administrador la revisa en **Miembros**, pone una contraseña inicial y a la persona le llega un correo de
+  bienvenida. Requiere `SUPABASE_SECRET_KEY`, `SMTP_USER` y `SMTP_PASSWORD` (ver `.env.example`).
 - ¿Olvidaste la contraseña? En `/recuperar` te llega un código al correo. En **Mi cuenta** cambias tu nombre
   y tu contraseña, o cierras sesión.
 - Deploy: Vercel, conectado a GitHub (cada push a `main` publica).

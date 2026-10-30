@@ -53,7 +53,7 @@ export async function resetWithCode(_prev: RecoverState, formData: FormData): Pr
   const { error: otpError } = await supabase.auth.verifyOtp({ email, token: code, type: "recovery" });
   if (otpError) return fail("El código no es válido o ya venció. Pide uno nuevo.");
 
-  const { error } = await supabase.auth.updateUser({ password });
+  const { error } = await supabase.auth.updateUser({ password, data: { must_change_password: false } });
   if (error) return fail(passwordUpdateError(error.code));
 
   redirect("/");

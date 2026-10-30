@@ -33,6 +33,8 @@ src/
 │  ├─ recuerdos/[slug]/        Un recuerdo abierto como libro (BookView)
 │  ├─ login/                   page, LoginForm (client), actions.ts (login / logout)
 │  ├─ recuperar/               Recuperar contraseña con código OTP al correo (2 pasos)
+│  ├─ solicitar/               Pública: pedir entrar (apodo, correo con MX válido, teléfono con prefijo)
+│  ├─ miembros/                Solo admin: solicitudes en espera → Admitir (crea cuenta + correo) / Rechazar
 │  ├─ cuenta/                  Mi cuenta: apodo, cambiar contraseña, cerrar sesión
 │  ├─ amigos/                  Agregar por apodo exacto (FriendSearch), solicitudes recibidas/enviadas, mis amigos (FriendButton)
 │  ├─ admin/                   CMS: listado (page), nueva/ (elegir tipo → editor), [id]/ (editar),
@@ -53,9 +55,13 @@ src/
 │  ├─ media.ts                 Archivos: getMyMedia, registerMedia, deleteMedia, signMedia (URLs firmadas 1 h)
 │  ├─ profiles.ts              Apodos y amigos: getMyProfile, updateMyNickname, getDirectory, getFriends,
 │  │                           getPendingRequestCount, send/respond/removeFriendship (rpc)
+│  ├─ membership.ts            (server-only) Solicitudes y admins: requestMembership, isAdmin, approve/rejectMembership
+│  ├─ mail.ts                  (server-only) Correo de bienvenida con nodemailer + Gmail SMTP
+│  ├─ countries.ts             Prefijos telefónicos
 │  ├─ passwords.ts             Reglas y mensajes de contraseña
 │  ├─ auth.ts                  getCurrentUser(), requireUser(), safeNextPath()
-│  ├─ supabase/                env.ts, server.ts, browser.ts (subidas), proxy.ts (updateSession)
+│  ├─ supabase/                env.ts, server.ts, browser.ts (subidas), proxy.ts (updateSession),
+│  │                           admin.ts (server-only, clave secreta: crear usuarios)
 │  └─ format.ts                formatDate() en español
 └─ types/memory.ts             Memory, MemoryPage, MemoryBlock, MediaItem, MemoryInput, Profile, KIND_INFO, BLOCK_INFO...
 supabase/
@@ -65,8 +71,11 @@ supabase/
 
 ## Auth y privacidad
 
-- **Privado por defecto.** `src/lib/supabase/proxy.ts` deja pasar sin sesión `PUBLIC_PATHS` (`/login`, `/recuperar`) y `OPEN_PREFIXES` (`/recuerdos/`); todo lo demás redirige a `/login?next=...`. En `/recuerdos/[slug]` decide el RLS: si es `public` se ve sin sesión; si no, redirige al login.
-- Email + contraseña con Supabase Auth. **Sin registro**: los usuarios se crean en el dashboard (Authentication → Users → Add user → *Auto Confirm User*).
+- **Privado por defecto.** `src/lib/supabase/proxy.ts` deja pasar sin sesión `PUBLIC_PATHS` (`/login`, `/recuperar`, `/solicitar`) y `OPEN_PREFIXES` (`/recuerdos/`); todo lo demás redirige a `/login?next=...`. En `/recuerdos/[slug]` decide el RLS: si es `public` se ve sin sesión; si no, redirige al login.
+- Email + contraseña con Supabase Auth. **Sin registro libre**: en `/solicitar` la persona deja apodo, correo y teléfono → `request_membership()` (anon) guarda en `membership_requests` (pending). No revela si el correo ya tiene cuenta. Campo trampa `website` contra bots; máximo 30 pendientes.
+- **Admitir miembros** (`/miembros`, solo `app_admins`; hoy jemycraft12@hotmail.com): el admin pone o genera la contraseña inicial → el servidor crea la cuenta con `auth.admin.createUser` (clave `SUPABASE_SECRET_KEY`), le pone el apodo pedido, marca la solicitud `approved` y envía el correo de bienvenida (`SMTP_USER`/`SMTP_PASSWORD`). Si el correo falla, la cuenta queda creada y el modal muestra los datos para enviarlos a mano.
+- Cuentas creadas así llevan `user_metadata.must_change_password = true`: el header muestra un aviso hasta que cambian la contraseña (en `/cuenta` o `/recuperar`, que lo ponen en `false`).
+- Variables solo de servidor (Vercel, tipo Secret): `SUPABASE_SECRET_KEY`, `SMTP_USER`, `SMTP_PASSWORD`. Nunca con prefijo `NEXT_PUBLIC_`.
 - **Recuperar contraseña**: `resetPasswordForEmail` → el usuario escribe el código de 6 dígitos → `verifyOtp({ type: "recovery" })` → `updateUser({ password })`. La plantilla **Reset password** incluye `{{ .Token }}`. Correo enviado con **SMTP de Gmail** (jemycraft12@gmail.com, contraseña de aplicación), configurado en Supabase → Authentication → SMTP. Site URL: `https://dia-de-suerte.vercel.app`.
 - Cambiar contraseña en `/cuenta` pide la actual (se verifica con `signInWithPassword`).
 - Header: con sesión muestra Inicio · Recuerdos · **Crear** (→ `/admin`) · Amigos (con número de solicitudes) · Mi cuenta · Salir. En ≤ 900 px pasa al menú lateral.
@@ -112,6 +121,7 @@ memories ─┬─ memory_pages (position) ── memory_blocks (position, type)
 - Migraciones: `20261028120000_create_memories`, `20261028150000_memory_visibility_and_ownership`, `20261029120000_pages_blocks_media` (páginas, bloques, media, Storage, save_memory), `20261030120000_friends_nicknames_photo_limit` (apodos únicos, correos privados, amistades, members → friends, 4 fotos por página).
 - Amigos con solicitudes (buscar por apodo exacto, sin lista de usuarios), apodo en Mi cuenta, borrar archivos de la biblioteca.
 - Migración `20261029041725_private_directory` (aplicada por MCP; su versión es la hora real en que se aplicó).
+- Solicitudes de acceso y página de admin para admitir miembros (migración `20261030020152_membership_requests`: `app_admins`, `membership_requests`, `request_membership`, `private.is_admin`).
 - Modales propios para todas las confirmaciones y resultados.
 - Fotos reducidas en el navegador a 1200 px (WebP/JPEG) antes de subirlas; volumen del disco (50 % por defecto, se recuerda).
 - Diseño de celular y tablet: menú lateral, libro de una página con swipe en celular, polaroids de la portada en fila deslizable, formularios con campos de 16 px y botones táctiles.

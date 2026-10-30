@@ -44,7 +44,8 @@ export async function changePassword(prev: AccountState, formData: FormData): Pr
   const { error: checkError } = await supabase.auth.signInWithPassword({ email: user.email ?? "", password: current });
   if (checkError) return { ...next, error: "La contraseña actual no es correcta." };
 
-  const { error } = await supabase.auth.updateUser({ password });
+  // Ya no usa la contraseña inicial que le envió el administrador.
+  const { error } = await supabase.auth.updateUser({ password, data: { must_change_password: false } });
   if (error) return { ...next, error: passwordUpdateError(error.code) };
   return { ...next, done: "Listo, tu contraseña cambió." };
 }

@@ -1,0 +1,30 @@
+/** Prefijos telefónicos para pedir acceso (Colombia primero). */
+export const COUNTRIES = [
+  { code: "CO", name: "Colombia", flag: "🇨🇴", dial: "+57" },
+  { code: "MX", name: "México", flag: "🇲🇽", dial: "+52" },
+  { code: "AR", name: "Argentina", flag: "🇦🇷", dial: "+54" },
+  { code: "BO", name: "Bolivia", flag: "🇧🇴", dial: "+591" },
+  { code: "BR", name: "Brasil", flag: "🇧🇷", dial: "+55" },
+  { code: "CL", name: "Chile", flag: "🇨🇱", dial: "+56" },
+  { code: "CR", name: "Costa Rica", flag: "🇨🇷", dial: "+506" },
+  { code: "CU", name: "Cuba", flag: "🇨🇺", dial: "+53" },
+  { code: "EC", name: "Ecuador", flag: "🇪🇨", dial: "+593" },
+  { code: "SV", name: "El Salvador", flag: "🇸🇻", dial: "+503" },
+  { code: "ES", name: "España", flag: "🇪🇸", dial: "+34" },
+  { code: "US", name: "Estados Unidos / Canadá", flag: "🇺🇸", dial: "+1" },
+  { code: "GT", name: "Guatemala", flag: "🇬🇹", dial: "+502" },
+  { code: "HN", name: "Honduras", flag: "🇭🇳", dial: "+504" },
+  { code: "NI", name: "Nicaragua", flag: "🇳🇮", dial: "+505" },
+  { code: "PA", name: "Panamá", flag: "🇵🇦", dial: "+507" },
+  { code: "PY", name: "Paraguay", flag: "🇵🇾", dial: "+595" },
+  { code: "PE", name: "Perú", flag: "🇵🇪", dial: "+51" },
+  { code: "PR", name: "Puerto Rico / Rep. Dominicana", flag: "🇵🇷", dial: "+1" },
+  { code: "UY", name: "Uruguay", flag: "🇺🇾", dial: "+598" },
+  { code: "VE", name: "Venezuela", flag: "🇻🇪", dial: "+58" },
+  { code: "DE", name: "Alemania", flag: "🇩🇪", dial: "+49" },
+  { code: "FR", name: "Francia", flag: "🇫🇷", dial: "+33" },
+  { code: "IT", name: "Italia", flag: "🇮🇹", dial: "+39" },
+  { code: "GB", name: "Reino Unido", flag: "🇬🇧", dial: "+44" },
+] as const;
+
+export type CountryCode = (typeof COUNTRIES)[number]["code"];

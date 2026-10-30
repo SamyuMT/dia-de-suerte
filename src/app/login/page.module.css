@@ -154,6 +154,39 @@
   border-radius: 3px;
 }
 
+.hint {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.phone {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 10px;
+}
+
+.phone select {
+  font-size: 16px;
+}
+
+/* Campo trampa para bots */
+.trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.divider {
+  margin: 6px 0 0;
+  padding-top: 14px;
+  border-top: 1.5px dashed var(--paper-dark);
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
+
 .code {
   font-size: 1.5rem;
   letter-spacing: 0.4em;

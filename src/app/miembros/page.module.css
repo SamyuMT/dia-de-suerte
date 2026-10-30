@@ -1,0 +1,254 @@
+.wrap {
+  padding-top: 40px;
+  padding-bottom: 72px;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-family: var(--font-hand);
+  font-size: 1.35rem;
+  text-decoration: none;
+  color: var(--ink-soft);
+}
+
+.back:hover {
+  color: var(--cloth-dark);
+}
+
+.card {
+  display: grid;
+  gap: 26px;
+  padding: 36px clamp(16px, 5vw, 44px);
+  background-color: var(--paper-light);
+  background-image: var(--noise),
+    radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(140, 95, 45, 0.3) 100%);
+  border-radius: 4px;
+  box-shadow: 0 14px 30px rgba(50, 28, 10, 0.3);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 2.6rem;
+  font-weight: 700;
+}
+
+.note {
+  margin: -14px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 1.8rem;
+}
+
+.count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  font-family: var(--font-title);
+  font-size: 0.8rem;
+  color: var(--paper-light);
+  background: var(--cloth);
+  border-radius: 13px;
+}
+
+.empty {
+  margin: 0;
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  color: var(--ink-soft);
+}
+
+.list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.request {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 14px;
+  padding: 14px 0;
+  border-top: 1.5px dashed var(--paper-dark);
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 42px;
+  height: 42px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  color: var(--paper-light);
+  background-color: var(--leather);
+  background-image: var(--noise);
+  border: 2px solid var(--leather-line);
+  border-radius: 50%;
+}
+
+.info {
+  display: grid;
+  flex: 1 1 220px;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nick {
+  font-family: var(--font-title);
+  overflow-wrap: anywhere;
+}
+
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.9rem;
+}
+
+.contact a {
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.contact a:hover {
+  color: var(--cloth-dark);
+}
+
+.date {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.primary,
+.quiet {
+  min-height: 40px;
+  padding: 6px 16px;
+  font: inherit;
+  font-size: 0.92rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.primary {
+  color: var(--paper-light);
+  background-color: var(--cloth);
+  background-image: var(--noise);
+  border: 0;
+  box-shadow: 0 2px 0 var(--cloth-dark);
+}
+
+.primary:hover {
+  background-color: var(--cloth-dark);
+}
+
+.quiet {
+  color: var(--ink);
+  background: var(--paper-light);
+  border: 1.5px solid var(--paper-edge);
+}
+
+.quiet:hover {
+  border-color: var(--cloth-dark);
+}
+
+.approved,
+.rejected {
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1.5px solid currentColor;
+  border-radius: 3px;
+}
+
+.approved {
+  color: #5d7f4a;
+}
+
+.rejected {
+  color: var(--paper-edge);
+}
+
+/* Dentro del modal de admitir */
+.passwordField {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  text-align: left;
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+
+.passwordRow {
+  display: flex;
+  gap: 6px;
+}
+
+.passwordRow input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  font-family: ui-monospace, monospace;
+  font-size: 16px;
+  color: var(--ink);
+  background: rgba(255, 250, 238, 0.8);
+  border: 1.5px dashed var(--paper-edge);
+  border-radius: 3px;
+}
+
+.passwordRow button {
+  width: 42px;
+  font-size: 1.1rem;
+  background: var(--paper-light);
+  border: 1.5px solid var(--paper-edge);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.error {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: var(--cloth-dark);
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 520px) {
+  .actions {
+    width: 100%;
+    padding-left: 56px;
+  }
+
+  .actions button {
+    flex: 1;
+  }
+}

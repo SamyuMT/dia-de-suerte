@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { logout } from "@/app/login/actions";
 import { getCurrentUser } from "@/lib/auth";
+import { getPendingMembershipCount, isAdmin } from "@/lib/membership";
 import { getMyProfile, getPendingRequestCount } from "@/lib/profiles";
 import Clover from "./Clover";
 import MobileMenu, { type NavLink } from "./MobileMenu";
@@ -8,13 +9,19 @@ import styles from "./SiteHeader.module.css";
 
 export default async function SiteHeader() {
   const user = await getCurrentUser();
-  const [profile, pending] = user ? await Promise.all([getMyProfile(), getPendingRequestCount()]) : [null, 0];
+  const [profile, pending, admin] = user
+    ? await Promise.all([getMyProfile(), getPendingRequestCount(), isAdmin()])
+    : [null, 0, false];
+  const waiting = admin ? await getPendingMembershipCount() : 0;
+  // Cuentas creadas por un administrador: deben cambiar la contraseña que les enviaron.
+  const mustChangePassword = Boolean(user?.user_metadata?.must_change_password);
 
   const links: NavLink[] = [
     { href: "/", label: "Inicio" },
     { href: "/#paginas", label: "Recuerdos" },
     { href: "/admin", label: "Crear", highlight: true },
     { href: "/amigos", label: "Amigos", badge: pending },
+    ...(admin ? [{ href: "/miembros", label: "Miembros", badge: waiting }] : []),
     { href: "/cuenta", label: "Mi cuenta" },
   ];
 
@@ -45,6 +52,12 @@ export default async function SiteHeader() {
           </>
         )}
       </div>
+      {mustChangePassword && (
+        <p className={styles.reminder}>
+          🗝️ Estás usando la contraseña que te enviaron.{" "}
+          <Link href="/cuenta">Cámbiala en Mi cuenta</Link> para que solo tú la sepas.
+        </p>
+      )}
     </header>
   );
 }

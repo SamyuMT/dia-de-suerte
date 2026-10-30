@@ -50,6 +50,13 @@ export default function LoginForm({ next }: { next: string }) {
       <Link href="/recuperar" className={styles.link}>
         ¿Olvidaste tu contraseña?
       </Link>
+
+      <p className={styles.divider}>
+        ¿Todavía no tienes cuenta?{" "}
+        <Link href="/solicitar" className={styles.link}>
+          Pide entrar al libro
+        </Link>
+      </p>
     </form>
   );
 }
